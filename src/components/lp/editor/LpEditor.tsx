@@ -84,22 +84,45 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
     initialLp.ab_test_active, initialLp.ab_variant_b,
   ]);
 
+  /**
+   * Variant-Aware Sections-Accessor.
+   * Wenn editingVariant='b' UND ab_test_active=true UND ab_variant_b vorhanden:
+   *   Operationen schreiben/lesen in ab_variant_b.sections statt content_json.sections.
+   * Sonst: Variant A (= sections).
+   */
+  const isEditingB = editingVariant === 'b' && abTestActive && abVariantB;
+  const currentSections: BshSection[] = isEditingB
+    ? (abVariantB.sections || [])
+    : sections;
+
+  const setCurrentSections = useCallback((updater: BshSection[] | ((prev: BshSection[]) => BshSection[])) => {
+    if (isEditingB) {
+      setAbVariantB((prev: any) => {
+        const prevSections = prev?.sections || [];
+        const next = typeof updater === 'function' ? updater(prevSections) : updater;
+        return { ...prev, sections: next };
+      });
+    } else {
+      setSections(prev => typeof updater === 'function' ? updater(prev) : updater);
+    }
+  }, [isEditingB]);
+
   const selectedSection = useMemo(
-    () => sections.find(s => s.id === selectedSectionId) || null,
-    [sections, selectedSectionId]
+    () => currentSections.find(s => s.id === selectedSectionId) || null,
+    [currentSections, selectedSectionId]
   );
 
-  // Section-Operationen
+  // Section-Operationen — agnostisch zu A/B via setCurrentSections
   const addSection = useCallback((type: BshSectionType) => {
     const newSection: BshSection = {
       id: uid(type),
       type,
       config: structuredClone(BSH_DEFAULT_CONFIGS[type]),
     };
-    setSections(prev => [...prev, newSection]);
+    setCurrentSections(prev => [...prev, newSection]);
     setSelectedSectionId(newSection.id);
     setShowPicker(false);
-  }, []);
+  }, [setCurrentSections]);
 
   const addSectionFromBaustein = useCallback((b: { id: string; name: string; type: BshSectionType; content_json: any }) => {
     const newSection: BshSection = {
@@ -107,38 +130,38 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
       type: b.type,
       config: structuredClone(b.content_json || {}),
     };
-    setSections(prev => [...prev, newSection]);
+    setCurrentSections(prev => [...prev, newSection]);
     setSelectedSectionId(newSection.id);
     setShowPicker(false);
-  }, []);
+  }, [setCurrentSections]);
 
   const updateSection = useCallback((id: string, patch: Partial<BshSection>) => {
-    setSections(prev => prev.map(s => (s.id === id ? { ...s, ...patch } : s)));
-  }, []);
+    setCurrentSections(prev => prev.map(s => (s.id === id ? { ...s, ...patch } : s)));
+  }, [setCurrentSections]);
 
   const updateSectionConfig = useCallback((id: string, configPatch: any) => {
-    setSections(prev => prev.map(s => (s.id === id ? { ...s, config: { ...s.config, ...configPatch } } : s)));
-  }, []);
+    setCurrentSections(prev => prev.map(s => (s.id === id ? { ...s, config: { ...s.config, ...configPatch } } : s)));
+  }, [setCurrentSections]);
 
   const removeSection = useCallback((id: string) => {
-    setSections(prev => prev.filter(s => s.id !== id));
+    setCurrentSections(prev => prev.filter(s => s.id !== id));
     if (selectedSectionId === id) {
-      const remaining = sections.filter(s => s.id !== id);
+      const remaining = currentSections.filter(s => s.id !== id);
       setSelectedSectionId(remaining[0]?.id || null);
     }
-  }, [sections, selectedSectionId]);
+  }, [currentSections, selectedSectionId, setCurrentSections]);
 
   const duplicateSection = useCallback((id: string) => {
-    const s = sections.find(x => x.id === id);
+    const s = currentSections.find(x => x.id === id);
     if (!s) return;
     const dup: BshSection = { ...s, id: uid(s.type), config: structuredClone(s.config) };
-    const idx = sections.findIndex(x => x.id === id);
-    setSections(prev => [...prev.slice(0, idx + 1), dup, ...prev.slice(idx + 1)]);
+    const idx = currentSections.findIndex(x => x.id === id);
+    setCurrentSections(prev => [...prev.slice(0, idx + 1), dup, ...prev.slice(idx + 1)]);
     setSelectedSectionId(dup.id);
-  }, [sections]);
+  }, [currentSections, setCurrentSections]);
 
   const moveSection = useCallback((id: string, dir: -1 | 1) => {
-    setSections(prev => {
+    setCurrentSections(prev => {
       const idx = prev.findIndex(s => s.id === id);
       const newIdx = idx + dir;
       if (idx < 0 || newIdx < 0 || newIdx >= prev.length) return prev;
@@ -146,7 +169,22 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
       [copy[idx], copy[newIdx]] = [copy[newIdx], copy[idx]];
       return copy;
     });
-  }, []);
+  }, [setCurrentSections]);
+
+  /**
+   * Wenn Bk vom A- in B-Modus switcht UND ab_variant_b leer ist,
+   * pre-populate mit Klon der A-Sections. Verhindert dass Bk sofort
+   * "leere B-Variante" sieht und verwirrt ist.
+   */
+  function switchEditingVariant(v: 'a' | 'b') {
+    if (v === 'b' && abTestActive && (!abVariantB || !(abVariantB.sections || []).length)) {
+      setAbVariantB({ sections: structuredClone(sections) });
+    }
+    setEditingVariant(v);
+    // Reset Selection auf 1. Section der neuen Variant
+    const newList = v === 'b' && abVariantB?.sections ? abVariantB.sections : sections;
+    setSelectedSectionId(newList[0]?.id || null);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -233,15 +271,18 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
 
       {/* 3-Spalten-Editor */}
       <div className="grid grid-cols-[320px_1fr_300px] gap-5">
-        {/* Section-Liste */}
+        {/* Section-Liste — mit optionalem A/B-Toggle wenn ab_test_active */}
         <SectionList
-          sections={sections}
+          sections={currentSections}
           selectedId={selectedSectionId}
           onSelect={setSelectedSectionId}
           onMove={moveSection}
           onRemove={removeSection}
           onDuplicate={duplicateSection}
           onAddClick={() => setShowPicker(true)}
+          abTestActive={abTestActive}
+          editingVariant={editingVariant}
+          onSwitchVariant={switchEditingVariant}
         />
 
         {/* Config-Panel */}

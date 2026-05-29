@@ -48,8 +48,6 @@ export default function EditorSidebar({
   editingVariant: 'a' | 'b';
   onEditingVariantChange: (v: 'a' | 'b') => void;
 }) {
-  void editingVariant;
-  void onEditingVariantChange;
   return (
     <aside className="space-y-4">
       {/* Settings */}
@@ -136,17 +134,29 @@ export default function EditorSidebar({
             )}
 
             <div className="pt-3 border-t border-purple-200 space-y-2">
-              <div className="text-[10px] text-slate-600">
-                Variant B {abVariantB ? `${(abVariantB.sections || []).length} Sections` : 'noch nicht angelegt'}
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] text-slate-600">
+                  Variant B: <span className="font-bold">{abVariantB ? `${(abVariantB.sections || []).length} Sections` : '—'}</span>
+                </div>
+                <div className="text-[10px] text-purple-700 font-semibold">
+                  Editiere: {editingVariant.toUpperCase()}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={onSyncVariantB}
-                  className="flex-1 text-[10px] px-2 py-1 rounded bg-white border border-purple-200 hover:bg-purple-50 font-semibold text-purple-800"
-                  title="Variant B = aktuelle Sections kopieren"
+                  onClick={onEditingVariantChange.bind(null, editingVariant === 'a' ? 'b' : 'a')}
+                  className="flex-1 text-[10px] px-2 py-1 rounded bg-white border border-purple-300 hover:bg-purple-50 font-bold text-purple-900"
                 >
-                  ↻ Sync von A
+                  Switch zu {editingVariant === 'a' ? 'B' : 'A'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onSyncVariantB}
+                  className="text-[10px] px-2 py-1 rounded bg-white border border-purple-200 hover:bg-purple-50 font-semibold text-purple-800"
+                  title="Variant B = Klon von A"
+                >
+                  ↻ Sync
                 </button>
                 {abVariantB && (
                   <button
@@ -155,12 +165,13 @@ export default function EditorSidebar({
                     className="text-[10px] px-2 py-1 rounded bg-white border border-rose-200 hover:bg-rose-50 font-semibold text-rose-800"
                     title="Variant B löschen"
                   >
-                    🗑 Reset
+                    🗑
                   </button>
                 )}
               </div>
               <p className="text-[10px] text-slate-500 italic">
-                Variant-B-Section-Editor kommt im nächsten Sprint — heute kopiert „Sync von A" Variant B mit dem aktuellen Stand.
+                Toggle „Variant A | B" über der Section-Liste switcht den Editier-Modus.
+                Beide Variants werden gemeinsam gespeichert.
               </p>
             </div>
           </>
@@ -168,8 +179,8 @@ export default function EditorSidebar({
       </div>
 
       <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-        <strong>3d-3 + 3e + 3f LIVE</strong> — Section-Editor mit 14 Types + Bausteine-Tab + A/B-Toggle.
-        Variant-B-Editor + Live-Preview-Pane in Folge-Sprints.
+        <strong>Phase 3 KOMPLETT LIVE</strong> — Section-Editor mit 14 Types + Bausteine + A/B-Toggle + Variant-B-Editor + Public-Routing & Counter.
+        Folge: Live-Preview-Pane, Asset-CDN, Closed-Loop-ROAS.
       </div>
     </aside>
   );
