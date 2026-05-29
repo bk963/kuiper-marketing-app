@@ -16,6 +16,7 @@
  *  - Canonical immer auf https://kuiper-safety.de/lp/<slug> (Hauptdomain)
  */
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { mktLp } from '@/lib/mkt-lp';
 import SectionRenderer from '@/components/lp/SectionRenderer';
 import { generateBshDefaultSections } from '@/components/lp/sections/defaults';
@@ -49,14 +50,21 @@ export async function generateMetadata({ params }: Props) {
     fields: 'id,internal_name,seo_title,seo_description,seo_noindex,slug',
   });
   const canonicalUrl = `https://kuiper-safety.de/lp/${slug}`;
+
+  // Host-aware noindex: marketing.kuiper-safety.de soll NICHT in Google
+  // (Canonical zeigt eh auf Apex, aber doppelter Schutz schadet nicht)
+  const hostHeader = (await headers()).get('host') || '';
+  const isMarketingHost = hostHeader.includes('marketing.kuiper-safety.de');
+
   const lp = items[0];
   if (lp) {
     const title = lp.seo_title || lp.internal_name || `LP: ${slug}`;
     const description = lp.seo_description || undefined;
+    const noindex = lp.seo_noindex || isMarketingHost;
     return {
       title,
       description,
-      robots: lp.seo_noindex ? 'noindex,nofollow' : undefined,
+      robots: noindex ? 'noindex,nofollow' : undefined,
       alternates: { canonical: canonicalUrl },
       openGraph: {
         title,
@@ -76,10 +84,11 @@ export async function generateMetadata({ params }: Props) {
   // Slug-Fallback (Demo-Modus ohne PB-Record)
   const hardcoded = HARDCODED_LP_META[slug];
   if (hardcoded) {
+    // Slug-Fallback ist Demo → immer noindex (egal welcher Host)
     return {
       title: hardcoded.title,
       description: hardcoded.description,
-      robots: 'noindex,nofollow', // Demo-Marketing-App soll nicht in Google
+      robots: 'noindex,nofollow',
       alternates: { canonical: canonicalUrl },
       openGraph: {
         title: hardcoded.title,
