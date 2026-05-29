@@ -25,6 +25,9 @@ export default function SectionList({
   onRemove,
   onDuplicate,
   onAddClick,
+  abTestActive = false,
+  editingVariant = 'a',
+  onSwitchVariant,
 }: {
   sections: BshSection[];
   selectedId: string | null;
@@ -33,12 +36,45 @@ export default function SectionList({
   onRemove: (id: string) => void;
   onDuplicate: (id: string) => void;
   onAddClick: () => void;
+  abTestActive?: boolean;
+  editingVariant?: 'a' | 'b';
+  onSwitchVariant?: (v: 'a' | 'b') => void;
 }) {
   return (
     <aside className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+      {/* A/B-Variant-Toggle wenn aktiv */}
+      {abTestActive && onSwitchVariant && (
+        <div className="px-4 py-2 border-b bg-purple-50 flex items-center gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-800 mr-2">A/B:</span>
+          <button
+            type="button"
+            onClick={() => onSwitchVariant('a')}
+            className={[
+              'flex-1 text-xs px-2 py-1 rounded font-bold transition',
+              editingVariant === 'a' ? 'bg-white text-purple-900 shadow-sm' : 'text-purple-700 hover:bg-white/50',
+            ].join(' ')}
+          >
+            Variant A
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchVariant('b')}
+            className={[
+              'flex-1 text-xs px-2 py-1 rounded font-bold transition',
+              editingVariant === 'b' ? 'bg-white text-purple-900 shadow-sm' : 'text-purple-700 hover:bg-white/50',
+            ].join(' ')}
+          >
+            Variant B
+          </button>
+        </div>
+      )}
+
       <div className="px-4 py-3 border-b bg-slate-50 flex items-center justify-between">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Sections ({sections.length})
+          {abTestActive && (
+            <span className="ml-1 text-purple-700">· {editingVariant.toUpperCase()}</span>
+          )}
         </h2>
         <button
           type="button"
