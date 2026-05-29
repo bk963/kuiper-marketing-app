@@ -217,23 +217,23 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ collection:
   const su = await getSuperuserToken(pbUrl);
   if (!su) return NextResponse.json({ error: 'PB-Superuser-Auth failed' }, { status: 500 });
 
-  // Count via filter (totalItems wirft sonst 400 dank PB v0.22 Bug)
+  // Count via Fallback-Pattern (PB v0.22 'Something went wrong' bei perPage=1 in vielen Collections)
   let count = 0;
   let migrated = 0;
   try {
-    const r1 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=1&filter=${encodeURIComponent('id!=""')}`, {
+    const r1 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=500&skipTotal=1&fields=id`, {
       headers: pbHeaders({ Authorization: su }), cache: 'no-store',
     });
     if (r1.ok) {
       const d = await r1.json();
-      count = d.totalItems || 0;
+      count = (d.items || []).length;
     }
-    const r2 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=1&filter=${encodeURIComponent('migrated_from_crm=true')}`, {
+    const r2 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=500&skipTotal=1&fields=id&filter=${encodeURIComponent('migrated_from_crm=true')}`, {
       headers: pbHeaders({ Authorization: su }), cache: 'no-store',
     });
     if (r2.ok) {
       const d = await r2.json();
-      migrated = d.totalItems || 0;
+      migrated = (d.items || []).length;
     }
   } catch {}
 

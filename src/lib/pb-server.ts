@@ -57,21 +57,16 @@ export async function pbList(collection: string, opts: ListOpts = {}): Promise<{
 }
 
 export async function pbCount(collection: string, filter = ''): Promise<number> {
+  /**
+   * PB v0.22 hat ständige 'Something went wrong while processing your request.'
+   * bei `?perPage=1` (mit oder ohne filter). Workaround: immer Fallback-Pattern
+   * mit skipTotal=1 + fields=id + perPage=500 und items.length zurückgeben.
+   *
+   * Trade-off: kein O(1) Counter mehr — aber 500-Items-Limit reicht für alle
+   * aktuellen mkt_*-Collections. Für >500 Records wäre Pagination nötig.
+   */
   const su = await getSuperuserToken();
-  try {
-    const u = `${PB}/api/collections/${collection}/records?perPage=1${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`;
-    const r = await fetch(u, { headers: pbHeaders({ Authorization: su }), cache: 'no-store' });
-    if (!r.ok) return 0;
-    const d = await r.json();
-    // PB v0.22 totalItems-Bug: bei manchen Collections fehlt totalItems → Fallback: items.length>0 -> Vollscan
-    if (typeof d.totalItems === 'number') return d.totalItems;
-    // Fallback: full list count
-    return await pbCountFallback(collection, filter);
-  } catch { return 0; }
-}
-
-async function pbCountFallback(collection: string, filter = ''): Promise<number> {
-  const su = await getSuperuserToken();
+  if (!su) return 0;
   try {
     const u = `${PB}/api/collections/${collection}/records?perPage=500&skipTotal=1&fields=id${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`;
     const r = await fetch(u, { headers: pbHeaders({ Authorization: su }), cache: 'no-store' });
