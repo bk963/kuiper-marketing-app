@@ -18,11 +18,20 @@ const NAV: NavItem[] = [
   { href: '/admin/ads', label: 'Ads', icon: '🎯' },
   { href: '/admin/conversions', label: 'Conversions', icon: '💰' },
 
-  { href: '#content', label: 'CONTENT', icon: '', hub: true },
+  { href: '#content-hub', label: 'CONTENT-HUB', icon: '', hub: true },
+  { href: '/admin/content/blog', label: 'Blog', icon: '📰' },
+  { href: '/admin/content/seo-intel', label: 'SEO-Intel', icon: '🎯' },
+  { href: '/admin/content/site', label: 'Site-Pages', icon: '🌐' },
+  { href: '/admin/content/templates', label: 'Templates', icon: '📐' },
+  { href: '/admin/content/forms', label: 'Formulare', icon: '📋' },
+  { href: '/admin/content/social', label: 'Social-Generator', icon: '🤖' },
+  { href: '/admin/content/leads', label: 'Marketing-Leads', icon: '👥' },
+
+  { href: '#legacy-content', label: 'CONTENT (LEGACY)', icon: '', hub: true },
   { href: '/admin/landingpages', label: 'Landingpages', icon: '🎨' },
   { href: '/admin/lead-magnets', label: 'Lead-Magnete', icon: '📥' },
-  { href: '/admin/forms', label: 'Formulare', icon: '📋' },
-  { href: '/admin/emails', label: 'E-Mail-Templates', icon: '✉️' },
+  { href: '/admin/forms', label: 'Formulare (alt)', icon: '📋' },
+  { href: '/admin/emails', label: 'E-Mail-Templates (alt)', icon: '✉️' },
 
   { href: '#ai', label: 'KI-WERKZEUGE', icon: '', hub: true },
   { href: '/admin/ai/social', label: 'Social-Generator', icon: '🤖' },
