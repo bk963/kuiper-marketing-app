@@ -18,9 +18,48 @@
  *  - Forwards JSON an Reach-Bridge, die hat ihren eigenen Guard
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { pbHeaders } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/**
+ * Conversion-Counter fire-and-forget. Inkrementiert ab_conversions_a/b
+ * für die LP.
+ */
+async function incrementConversion(lpId: string, variant: 'a' | 'b'): Promise<void> {
+  const pbUrl = process.env.MPB_URL || 'https://pb.kuiper-safety.de';
+  const email = process.env.PB_BLOG_EMAIL || process.env.PB_SUPERUSER_EMAIL || '';
+  const pass = process.env.PB_BLOG_PASS || process.env.PB_SUPERUSER_PASS || '';
+  if (!email || !pass) return;
+
+  try {
+    const authRes = await fetch(`${pbUrl}/api/collections/_superusers/auth-with-password`, {
+      method: 'POST',
+      headers: pbHeaders(),
+      body: JSON.stringify({ identity: email, password: pass }),
+      cache: 'no-store',
+    });
+    if (!authRes.ok) return;
+    const { token } = await authRes.json();
+    if (!token) return;
+
+    const getRes = await fetch(`${pbUrl}/api/collections/mkt_landingpages/records/${lpId}?fields=ab_conversions_a,ab_conversions_b`, {
+      headers: pbHeaders({ Authorization: token }),
+      cache: 'no-store',
+    });
+    if (!getRes.ok) return;
+    const lp = await getRes.json();
+
+    const field = variant === 'a' ? 'ab_conversions_a' : 'ab_conversions_b';
+    const currentValue = Number(lp[field] || 0);
+    await fetch(`${pbUrl}/api/collections/mkt_landingpages/records/${lpId}`, {
+      method: 'PATCH',
+      headers: pbHeaders({ Authorization: token }),
+      body: JSON.stringify({ [field]: currentValue + 1 }),
+    });
+  } catch { /* fire-and-forget */ }
+}
 
 const REACH_URL = process.env.REACH_LEAD_URL || 'https://app.kuiper-safety.de/hcgi/api/reach/leads';
 const REACH_TOKEN = process.env.REACH_SERVICE_TOKEN || '';
@@ -97,6 +136,13 @@ export async function POST(req: NextRequest) {
     }
 
     const d = await res.json().catch(() => ({}));
+
+    // A/B-Conversion-Counter fire-and-forget
+    const variant = body.lp_ab_variant === 'b' ? 'b' : body.lp_ab_variant === 'a' ? 'a' : null;
+    if (body.lp_id && variant) {
+      incrementConversion(body.lp_id, variant).catch(() => { /* silent */ });
+    }
+
     return NextResponse.json({ ok: true, actions: d.actions || [], lead_id: d.lead_id || null });
   } catch (e: any) {
     console.error('[lp/lead] forwarding error', e?.message);
