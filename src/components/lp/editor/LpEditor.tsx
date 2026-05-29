@@ -55,6 +55,9 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
   const [sections, setSections] = useState<BshSection[]>(initialSections);
   const [seoTitle, setSeoTitle] = useState<string>(initialLp.seo_title || '');
   const [seoDescription, setSeoDescription] = useState<string>(initialLp.seo_description || '');
+  const [abTestActive, setAbTestActive] = useState<boolean>(!!initialLp.ab_test_active);
+  const [abVariantB, setAbVariantB] = useState<any>(initialLp.ab_variant_b || null);
+  const [editingVariant, setEditingVariant] = useState<'a' | 'b'>('a');
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     initialSections[0]?.id || null
   );
@@ -64,16 +67,22 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [showPicker, setShowPicker] = useState(false);
 
-  // Mark dirty on any sections / seo change (after first render)
+  // Mark dirty on any sections / seo / ab change
   useEffect(() => {
     if (
       JSON.stringify(sections) !== JSON.stringify(initialSections) ||
       seoTitle !== (initialLp.seo_title || '') ||
-      seoDescription !== (initialLp.seo_description || '')
+      seoDescription !== (initialLp.seo_description || '') ||
+      abTestActive !== !!initialLp.ab_test_active ||
+      JSON.stringify(abVariantB) !== JSON.stringify(initialLp.ab_variant_b || null)
     ) {
       setDirty(true);
     }
-  }, [sections, seoTitle, seoDescription, initialSections, initialLp.seo_title, initialLp.seo_description]);
+  }, [
+    sections, seoTitle, seoDescription, abTestActive, abVariantB,
+    initialSections, initialLp.seo_title, initialLp.seo_description,
+    initialLp.ab_test_active, initialLp.ab_variant_b,
+  ]);
 
   const selectedSection = useMemo(
     () => sections.find(s => s.id === selectedSectionId) || null,
@@ -86,6 +95,17 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
       id: uid(type),
       type,
       config: structuredClone(BSH_DEFAULT_CONFIGS[type]),
+    };
+    setSections(prev => [...prev, newSection]);
+    setSelectedSectionId(newSection.id);
+    setShowPicker(false);
+  }, []);
+
+  const addSectionFromBaustein = useCallback((b: { id: string; name: string; type: BshSectionType; content_json: any }) => {
+    const newSection: BshSection = {
+      id: uid(b.type),
+      type: b.type,
+      config: structuredClone(b.content_json || {}),
     };
     setSections(prev => [...prev, newSection]);
     setSelectedSectionId(newSection.id);
@@ -139,6 +159,8 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
           content_json: { ...initialContent, sections },
           seo_title: seoTitle,
           seo_description: seoDescription,
+          ab_test_active: abTestActive,
+          ab_variant_b: abVariantB,
         }),
       });
       if (!res.ok) {
@@ -153,6 +175,18 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Variant-B aktivieren mit Klon von Variant A (default-Variant). */
+  function activateAbTest() {
+    if (!abVariantB) {
+      setAbVariantB({ sections: structuredClone(sections) });
+    }
+    setAbTestActive(true);
+  }
+
+  function deactivateAbTest() {
+    setAbTestActive(false);
   }
 
   const ab = localAbStats(lp);
@@ -229,6 +263,14 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
           seoDescription={seoDescription}
           onSeoTitleChange={setSeoTitle}
           onSeoDescriptionChange={setSeoDescription}
+          abTestActive={abTestActive}
+          abVariantB={abVariantB}
+          onActivateAbTest={activateAbTest}
+          onDeactivateAbTest={deactivateAbTest}
+          onClearVariantB={() => setAbVariantB(null)}
+          onSyncVariantB={() => setAbVariantB({ sections: structuredClone(sections) })}
+          editingVariant={editingVariant}
+          onEditingVariantChange={setEditingVariant}
         />
       </div>
 
@@ -236,6 +278,7 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
       {showPicker && (
         <AddSectionPicker
           onPick={addSection}
+          onPickBaustein={addSectionFromBaustein}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -243,7 +286,35 @@ export default function LpEditor({ lp: initialLp }: { lp: any }) {
   );
 }
 
-function AddSectionPicker({ onPick, onClose }: { onPick: (t: BshSectionType) => void; onClose: () => void }) {
+type BausteinHit = {
+  id: string;
+  name: string;
+  description?: string;
+  type: BshSectionType;
+  content_json: any;
+};
+
+function AddSectionPicker({
+  onPick,
+  onPickBaustein,
+  onClose,
+}: {
+  onPick: (t: BshSectionType) => void;
+  onPickBaustein: (b: BausteinHit) => void;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<'catalog' | 'bausteine'>('catalog');
+  const [bausteine, setBausteine] = useState<BausteinHit[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tab !== 'bausteine' || bausteine !== null) return;
+    fetch('/api/admin/baustein/list?status=active', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((d: { items: BausteinHit[] }) => setBausteine(d.items || []))
+      .catch((e: any) => setLoadError(e?.message || 'Bausteine konnten nicht geladen werden'));
+  }, [tab, bausteine]);
+
   return (
     <div
       role="dialog"
@@ -252,28 +323,93 @@ function AddSectionPicker({ onPick, onClose }: { onPick: (t: BshSectionType) => 
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[80vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-xl w-full max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white">
+        <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
           <h2 className="text-lg font-bold">Section hinzufügen</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
         </div>
-        <div className="p-6 grid grid-cols-2 gap-3">
-          {BSH_SECTION_CATALOG.map(it => (
-            <button
-              key={it.key}
-              type="button"
-              onClick={() => onPick(it.key)}
-              className="text-left p-4 rounded-lg border border-slate-200 hover:border-brand hover:bg-brand/5 transition"
-            >
-              <div className="font-bold text-sm text-navy">{it.label}</div>
-              <div className="text-xs text-slate-600 mt-1">{it.desc}</div>
-              <div className="text-[10px] font-mono text-slate-400 mt-2">{it.key}</div>
-            </button>
-          ))}
+
+        {/* Tab-Bar */}
+        <div className="px-6 pt-3 flex gap-1 border-b">
+          <TabButton active={tab === 'catalog'} onClick={() => setTab('catalog')}>
+            🎨 BSH-Catalog (14)
+          </TabButton>
+          <TabButton active={tab === 'bausteine'} onClick={() => setTab('bausteine')}>
+            🧩 Bausteine{bausteine ? ` (${bausteine.length})` : ''}
+          </TabButton>
+        </div>
+
+        <div className="p-6 overflow-y-auto">
+          {tab === 'catalog' && (
+            <div className="grid grid-cols-2 gap-3">
+              {BSH_SECTION_CATALOG.map(it => (
+                <button
+                  key={it.key}
+                  type="button"
+                  onClick={() => onPick(it.key)}
+                  className="text-left p-4 rounded-lg border border-slate-200 hover:border-brand hover:bg-brand/5 transition"
+                >
+                  <div className="font-bold text-sm text-navy">{it.label}</div>
+                  <div className="text-xs text-slate-600 mt-1">{it.desc}</div>
+                  <div className="text-[10px] font-mono text-slate-400 mt-2">{it.key}</div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {tab === 'bausteine' && (
+            <>
+              {loadError && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">{loadError}</div>
+              )}
+              {bausteine === null && !loadError && (
+                <div className="text-center text-slate-500 text-sm py-8">Lade Bausteine …</div>
+              )}
+              {bausteine && bausteine.length === 0 && (
+                <div className="text-center text-slate-500 text-sm py-8 space-y-2">
+                  <p>Noch keine aktiven Bausteine.</p>
+                  <a href="/admin/content/landingpages/bausteine" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-xs">
+                    Bausteine-Liste öffnen ↗
+                  </a>
+                </div>
+              )}
+              {bausteine && bausteine.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {bausteine.map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => onPickBaustein(b)}
+                      className="text-left p-4 rounded-lg border border-slate-200 hover:border-brand hover:bg-brand/5 transition"
+                    >
+                      <div className="font-bold text-sm text-navy">{b.name}</div>
+                      <div className="text-xs text-slate-600 mt-1">{b.description || ''}</div>
+                      <div className="text-[10px] font-mono text-slate-400 mt-2">{b.type}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'px-4 py-2 text-sm font-bold transition border-b-2',
+        active ? 'text-brand border-brand' : 'text-slate-500 border-transparent hover:text-slate-700',
+      ].join(' ')}
+    >
+      {children}
+    </button>
   );
 }
