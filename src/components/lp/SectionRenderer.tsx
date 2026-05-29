@@ -1,42 +1,40 @@
 /**
- * Section-Renderer für Editor-driven Landingpages.
+ * Section-Renderer — content_json.sections[] → React-Components.
  *
- * Phase 3d: Skeleton — kommt in 3d-2 zu Leben, sobald die 13 BSH-Sections
- * als separate React-Components extrahiert sind.
+ * Schritte:
+ *  1. Sections nach Type maps zur Component aus SECTION_COMPONENTS-Registry
+ *  2. Wrappt das Ganze in <LpFrame> (Header + Footer-3-Teiler)
+ *  3. Unbekannte Section-Types werden mit Warn-Banner statt Crash gerendert
  *
- * Maps section.type → Component(props=section.config).
- * Für jetzt: nur Platzhalter-UI mit Section-Type-Liste.
+ * Wird von /lp/[slug]/page.tsx aufgerufen wenn content_json.sections nicht-leer.
  */
-import type { LpSection } from '@/lib/mkt-lp';
+import LpFrame from './LpFrame';
+import { SECTION_COMPONENTS } from './sections/registry';
+import type { BshSection, BshSectionType } from './sections/types';
 
-export default function SectionRenderer({ lp, sections }: { lp: any; sections: LpSection[] }) {
+export default function SectionRenderer({
+  lp,
+  sections,
+}: {
+  lp: any;
+  sections: BshSection[];
+}) {
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">{lp.internal_name}</h1>
-        <p className="text-slate-600 mb-8">Slug: <code className="bg-slate-200 px-2 py-1 rounded">/lp/{lp.slug}</code> · {sections.length} Sections</p>
-
-        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-8 text-amber-900">
-          <strong>Phase 3d-2 ausstehend:</strong> Editor-driven Section-Rendering wird mit Section-Components ausgeliefert.
-          Aktuell wird nur die Section-Liste (Typ + ID) angezeigt.
-        </div>
-
-        <div className="space-y-3">
-          {sections.map((s, i) => (
-            <div key={s.id || i} className="bg-white rounded-lg border p-4">
-              <div className="flex items-baseline justify-between">
-                <span className="font-bold text-navy">{i + 1}. {s.type}</span>
-                <code className="text-xs text-slate-500">{s.id}</code>
-              </div>
-              {s.config && Object.keys(s.config).length > 0 && (
-                <pre className="mt-2 text-xs bg-slate-100 p-2 rounded overflow-auto max-h-32">
-                  {JSON.stringify(s.config, null, 2)}
-                </pre>
-              )}
+    <LpFrame>
+      {sections.map((s, i) => {
+        const Comp = SECTION_COMPONENTS[s.type as BshSectionType];
+        if (!Comp) {
+          return (
+            <div
+              key={s.id || i}
+              style={{ background: '#fef3c7', borderLeft: '4px solid #d97706', padding: 16, margin: 8, fontFamily: 'monospace', fontSize: 13 }}
+            >
+              ⚠️ Unbekannter Section-Type: <code>{s.type}</code> (Position {i + 1}, id={s.id})
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
+          );
+        }
+        return <Comp key={s.id || i} config={s.config || {}} lpId={lp?.id} />;
+      })}
+    </LpFrame>
   );
 }
