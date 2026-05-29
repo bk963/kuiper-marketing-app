@@ -12,26 +12,21 @@ export async function middleware(req: NextRequest) {
   reqHeaders.set('x-pathname', p);
 
   /**
-   * Phase 6 LP-URL-Architecture: marketing.kuiper-safety.de/lp/* → 301 kuiper-safety.de/lp/*
+   * Phase 6 LP-URL-Architecture VERSCHOBEN auf Folge-Sprint:
+   * Multi-Layer-Proxy (Cloudflare → Caddy auf kuiper-web-prod → Coolify-Traefik
+   * → Next.js) strippt Custom-Marker-Header X-Lp-Proxy-From zwischen Caddy und
+   * Marketing-App-Receiver. Direkt-Test mit -H "X-Lp-Proxy-From: kuiper-web-prod"
+   * → 200 (Middleware-Logik korrekt), via Proxy → 301-Loop (Marker fehlt).
    *
-   * Trigger nur bei direktem Request an marketing.kuiper-safety.de.
-   * NICHT bei Caddy-Proxy von kuiper-web-prod — der setzt Custom-Marker-Header
-   * `X-Lp-Proxy-From: kuiper-web-prod`. Sehr robust gegen Header-Mutationen
-   * von Coolify/Traefik dazwischen.
+   * Alternative-Strategien für Folge-Sprint:
+   *  - robots.txt auf marketing.kuiper-safety.de noindex /lp/* (SEO-Schutz reicht)
+   *  - Coolify-Traefik-Middleware mit IP-Whitelist (Caddy-IP allow, sonst 301)
+   *  - Cloudflare-Worker auf marketing.kuiper-safety.de der vor Next.js 301 setzt
+   *
+   * SEO-Risiko aktuell: minimal — marketing.kuiper-safety.de/lp/* war nur kurzzeitig
+   * live (heute Sprint), kein Google-Crawl in der Zwischenzeit. Canonical-Tag
+   * (Phase 4) genügt um beide URLs dem gleichen Inhalt zuzuweisen.
    */
-  if (p.startsWith('/lp/') || p === '/sitemap-lp.xml') {
-    const host = req.headers.get('host') || '';
-    const proxyMarker = req.headers.get('x-lp-proxy-from') || '';
-    const isProxyFromWeb = proxyMarker === 'kuiper-web-prod';
-    const isExternalDirect = host.includes('marketing.kuiper-safety.de') && !isProxyFromWeb;
-    if (isExternalDirect) {
-      const url = req.nextUrl.clone();
-      url.host = 'kuiper-safety.de';
-      url.port = '';
-      url.protocol = 'https:';
-      return NextResponse.redirect(url, 301);
-    }
-  }
 
   // Root / leitet zum Admin-Bereich
   if (p === '/') {
