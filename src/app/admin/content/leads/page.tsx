@@ -18,7 +18,7 @@ export default async function LeadsPage() {
 
   const { items, error } = await mktForms.leads({
     perPage: 200, sort: '-created',
-    fields: 'id,email,name,phone,company,status,landingpage_slug,utm_source,utm_campaign,created',
+    fields: 'id,contact_email,contact_name,contact_phone,company_name,status,source,last_contact_at,next_followup_at,created',
   });
 
   return (
@@ -50,25 +50,25 @@ export default async function LeadsPage() {
                 <th className="px-3 py-3 text-left font-semibold">Name / Firma</th>
                 <th className="px-3 py-3 text-left font-semibold">Telefon</th>
                 <th className="px-3 py-3 text-left font-semibold">Status</th>
-                <th className="px-3 py-3 text-left font-semibold">UTM-Source</th>
+                <th className="px-3 py-3 text-left font-semibold">Quelle</th>
                 <th className="px-3 py-3 text-left font-semibold">Erstellt</th>
               </tr>
             </thead>
             <tbody>
               {items.map((l: any) => (
                 <tr key={l.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs">{l.email}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{l.contact_email || '—'}</td>
                   <td className="px-3 py-3">
-                    {l.name && <div>{l.name}</div>}
-                    {l.company && <div className="text-xs text-slate-500">{l.company}</div>}
+                    {l.contact_name && <div>{l.contact_name}</div>}
+                    {l.company_name && <div className="text-xs text-slate-500">{l.company_name}</div>}
                   </td>
-                  <td className="px-3 py-3 text-slate-600 text-xs">{l.phone || '—'}</td>
+                  <td className="px-3 py-3 text-slate-600 text-xs">{l.contact_phone || '—'}</td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${STATUS_COLOR[l.status] || 'bg-slate-100 text-slate-600'}`}>
                       {l.status || 'new'}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-xs text-slate-600">{l.utm_source || '—'}</td>
+                  <td className="px-3 py-3 text-xs text-slate-600">{l.source || '—'}</td>
                   <td className="px-3 py-3 text-xs text-slate-500">
                     {l.created ? new Date(l.created).toLocaleDateString('de-DE') : '—'}
                   </td>
