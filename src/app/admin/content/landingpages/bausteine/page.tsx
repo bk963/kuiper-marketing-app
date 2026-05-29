@@ -48,7 +48,12 @@ export default async function BausteinePage() {
           <Link href="/admin/content/landingpages" className="text-slate-500 hover:text-brand">← LPs</Link>
           <h1 className="text-3xl font-extrabold">🧩 LP-Bausteine</h1>
         </div>
-        <p className="text-slate-600 text-sm">{total} Bausteine · {active} aktiv</p>
+        <div className="flex items-center gap-4">
+          <p className="text-slate-600 text-sm">{total} Bausteine · {active} aktiv</p>
+          <Link href="/admin/content/landingpages/bausteine/new" className="px-4 py-2 bg-brand text-navy rounded-lg font-bold hover:bg-brand-light transition text-sm">
+            + Neuer Baustein
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
