@@ -11,10 +11,12 @@ let _gsc: any = null;
 function getClient() {
   if (_gsc) return _gsc;
   try {
-    const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!json) return null;
+    const b64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_B64;
+    const plain = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const credentials = b64 ? JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) : (plain ? JSON.parse(plain) : null);
+    if (!credentials) return null;
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(json),
+      credentials,
       scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
     });
     _gsc = google.searchconsole({ version: 'v1', auth: auth as any });

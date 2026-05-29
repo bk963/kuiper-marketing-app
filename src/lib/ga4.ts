@@ -17,9 +17,13 @@ let _client: BetaAnalyticsDataClient | null = null;
 export function getGa4Client(): BetaAnalyticsDataClient | null {
   if (_client) return _client;
   try {
-    const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (json) {
-      _client = new BetaAnalyticsDataClient({ credentials: JSON.parse(json) });
+    // Akzeptiert: GOOGLE_SERVICE_ACCOUNT_JSON_B64 (base64) ODER GOOGLE_SERVICE_ACCOUNT_JSON (plain) ODER GOOGLE_APPLICATION_CREDENTIALS (file)
+    const b64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_B64;
+    const plain = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (b64) {
+      _client = new BetaAnalyticsDataClient({ credentials: JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) });
+    } else if (plain) {
+      _client = new BetaAnalyticsDataClient({ credentials: JSON.parse(plain) });
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       _client = new BetaAnalyticsDataClient();
     } else {
