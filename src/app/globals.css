@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+}
+
+.prose a { color: #00b0f0; }
+.prose a:hover { text-decoration: underline; }
+.prose h1, .prose h2, .prose h3 { font-weight: 800; letter-spacing: -0.02em; }
+
+/* === Kuiper Cookie-Banner (1:1 Port von www.kuiper-safety.de) === */
+#kuiper-cookie-banner{position:fixed;bottom:24px;right:24px;z-index:99999;max-width:460px;width:calc(100vw - 48px);font-family:Figtree,system-ui,-apple-system,sans-serif;opacity:0;transform:translateY(20px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+#kuiper-cookie-banner.kc-show{opacity:1;transform:translateY(0);pointer-events:auto}
+#kuiper-cookie-banner.kc-hidden{display:none}
+.kc-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px -10px #0d1b3e40,0 8px 20px -4px #0d1b3e1f;border-top:4px solid #00C2FF;overflow:hidden;position:relative}
+.kc-main,.kc-settings{padding:24px 26px 22px}
+#kuiper-cookie-banner .kc-settings,#kuiper-cookie-banner.kc-show-settings .kc-main{display:none}
+#kuiper-cookie-banner.kc-show-settings .kc-settings{display:block}
+.kc-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.kc-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#e6f8ff,#ccf0ff);color:#0d1b3e;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kc-header h2{margin:0;font-size:18px;font-weight:800;color:#0d1b3e;line-height:1.2;letter-spacing:-.01em}
+#kuiper-cookie-banner p#kc-desc{font-size:13.5px;line-height:1.55;color:#475569;margin:0 0 16px}
+.kc-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.kc-btn{border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;letter-spacing:-.005em}
+.kc-btn-primary{background:#00c2ff;color:#0d1b3e;box-shadow:0 4px 14px -2px #00c2ff66}
+.kc-btn-primary:hover{background:#00b0e8;transform:translateY(-1px);box-shadow:0 6px 18px -2px #00c2ff8c}
+.kc-btn-ghost{background:#f2f4f8;color:#0d1b3e}
+.kc-btn-ghost:hover{background:#e4e8ef}
+.kc-btn-link{background:none;border:none;color:#1b7fd4;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:8px 4px;margin-left:auto;font-family:inherit}
+.kc-btn-link:hover{color:#00c2ff}
+.kc-settings h3{margin:8px 0 18px;font-size:17px;font-weight:800;color:#0d1b3e;letter-spacing:-.01em}
+.kc-back{background:none;border:none;color:#1b7fd4;font-size:13px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font-family:inherit;margin-bottom:8px}
+.kc-back:hover{color:#00c2ff}
+.kc-cat{padding:14px 0;border-top:1px solid #E8ECF2}
+.kc-cat:first-of-type{border-top:none;padding-top:8px}
+.kc-cat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.kc-cat-title{font-size:14px;font-weight:700;color:#0d1b3e;display:flex;align-items:center;gap:8px}
+.kc-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kc-badge-on{background:#e6faf0;color:#10a050}
+.kc-cat-lock{font-size:14px;opacity:.5}
+.kc-cat p{margin:0;font-size:12.5px;line-height:1.5;color:#6b7280}
+.kc-cat p em{color:#9ca3af;font-style:italic}
+.kc-toggle{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.kc-toggle input{opacity:0;width:0;height:0}
+.kc-toggle-slider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:background .2s ease}
+.kc-toggle-slider:before{content:"";position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s ease;box-shadow:0 1px 3px #0003}
+.kc-toggle input:checked+.kc-toggle-slider{background:#00c2ff}
+.kc-toggle input:checked+.kc-toggle-slider:before{transform:translate(18px)}
+.kc-actions-settings{margin-top:16px}
+.kc-legal{font-size:11.5px;color:#9ca3af;margin:14px 0 0;line-height:1.5}
+.kc-legal a{color:#1b7fd4;text-decoration:underline;text-underline-offset:2px}
+.kc-legal a:hover{color:#00c2ff}
+@media (max-width:480px){#kuiper-cookie-banner{bottom:12px;right:12px;left:12px;width:auto;max-width:none}}
