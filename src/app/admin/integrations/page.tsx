@@ -26,7 +26,7 @@ export default async function IntegrationsPage() {
             { key: 'GOOGLE_SERVICE_ACCOUNT_JSON_B64', set: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON_B64 },
             { key: 'GA4_PROPERTY_ID', set: !!process.env.GA4_PROPERTY_ID, value: process.env.GA4_PROPERTY_ID },
           ]}
-          docs="SA als Viewer in GA4-Property „Kuiper Safety" (G-YV7MPLX2VF) + numerische Property-ID"
+          docs={'SA als Viewer in GA4-Property „Kuiper Safety" (G-YV7MPLX2VF) + numerische Property-ID'}
         />
         <Service
           name="Google Search Console"
@@ -35,7 +35,7 @@ export default async function IntegrationsPage() {
             { key: 'GOOGLE_SERVICE_ACCOUNT_JSON_B64', set: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON_B64 },
             { key: 'GSC_SITE_URL', set: !!process.env.GSC_SITE_URL, value: process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de (default)' },
           ]}
-          docs="SA als „Limited User" in GSC-Property hinzufügen"
+          docs={'SA als „Limited User" in GSC-Property hinzufügen'}
         />
         <Service
           name="Google Ads"
