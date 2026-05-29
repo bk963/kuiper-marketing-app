@@ -51,16 +51,21 @@ export async function generateMetadata({ params }: Props) {
   });
   const canonicalUrl = `https://kuiper-safety.de/lp/${slug}`;
 
-  // Host-aware noindex: marketing.kuiper-safety.de soll NICHT in Google
-  // (Canonical zeigt eh auf Apex, aber doppelter Schutz schadet nicht)
-  const hostHeader = (await headers()).get('host') || '';
-  const isMarketingHost = hostHeader.includes('marketing.kuiper-safety.de');
+  // Host-aware noindex: marketing.kuiper-safety.de Direct soll NICHT in Google.
+  // Caddy auf kuiper-web-prod proxied zu Marketing-App mit Host=marketing.kuiper-safety.de,
+  // setzt aber Custom-Marker X-Lp-Proxy-From=kuiper-web-prod. Wenn Marker da = Proxy
+  // von Apex = indexieren erlaubt. Wenn Marker fehlt + Host=marketing = Direct = noindex.
+  const h = await headers();
+  const hostHeader = h.get('host') || '';
+  const proxyMarker = h.get('x-lp-proxy-from') || '';
+  const isMarketingDirect = hostHeader.includes('marketing.kuiper-safety.de')
+    && proxyMarker !== 'kuiper-web-prod';
 
   const lp = items[0];
   if (lp) {
     const title = lp.seo_title || lp.internal_name || `LP: ${slug}`;
     const description = lp.seo_description || undefined;
-    const noindex = lp.seo_noindex || isMarketingHost;
+    const noindex = lp.seo_noindex || isMarketingDirect;
     return {
       title,
       description,
