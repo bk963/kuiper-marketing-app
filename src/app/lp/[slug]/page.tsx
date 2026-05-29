@@ -24,6 +24,15 @@ export const revalidate = 0;
 
 type Props = { params: Promise<{ slug: string }> };
 
+// Hardcoded-Slug-Fallback Metadata — gilt wenn kein PB-Record existiert.
+// Wird in Phase 3d-2 zusammen mit BshTemplate in eine LP-Registry ausgelagert.
+const HARDCODED_LP_META: Record<string, { title: string; description?: string }> = {
+  'brandschutzhelfer-ausbildung': {
+    title: 'Brandschutzhelfer Ausbildung von echten Feuerwehrmännern — Kuiper Brandschutz GmbH',
+    description: 'Brandschutzhelfer Ausbildung bundesweit direkt bei Ihnen vor Ort. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
+  },
+};
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const { items } = await mktLp.landingpages({
@@ -32,13 +41,25 @@ export async function generateMetadata({ params }: Props) {
     fields: 'id,internal_name,seo_title,seo_description,seo_noindex,slug',
   });
   const lp = items[0];
-  if (!lp) return { title: 'Landingpage nicht gefunden' };
-  return {
-    title: lp.seo_title || lp.internal_name || `LP: ${slug}`,
-    description: lp.seo_description || undefined,
-    robots: lp.seo_noindex ? 'noindex,nofollow' : undefined,
-    alternates: { canonical: `https://kuiper-safety.de/lp/${slug}` },
-  };
+  if (lp) {
+    return {
+      title: lp.seo_title || lp.internal_name || `LP: ${slug}`,
+      description: lp.seo_description || undefined,
+      robots: lp.seo_noindex ? 'noindex,nofollow' : undefined,
+      alternates: { canonical: `https://kuiper-safety.de/lp/${slug}` },
+    };
+  }
+  // Slug-Fallback (Demo-Modus ohne PB-Record)
+  const hardcoded = HARDCODED_LP_META[slug];
+  if (hardcoded) {
+    return {
+      title: hardcoded.title,
+      description: hardcoded.description,
+      robots: 'noindex,nofollow', // Demo-Marketing-App soll nicht in Google
+      alternates: { canonical: `https://kuiper-safety.de/lp/${slug}` },
+    };
+  }
+  return { title: 'Landingpage nicht gefunden' };
 }
 
 export default async function LpPage({ params }: Props) {

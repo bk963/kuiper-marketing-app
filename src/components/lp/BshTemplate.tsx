@@ -220,6 +220,19 @@ export default function BshTemplate({ slug, formAction, lpId }: Props) {
         </div>
       </section>
 
+      {/* ============ ProvenExpert-Widget ============ */}
+      <section className="kf-bsh-pe">
+        <div className="kf-bsh-pe__inner">
+          <p className="kf-bsh-pe__label">Ausgezeichnete Kundenbewertungen</p>
+          <div id="pewl"></div>
+          <script
+            type="text/javascript"
+            src="https://www.provenexpert.com/widget/landing_brandschutzdozenten.js?feedback=1&avatar=1&competence=1&language=de-de&style=white"
+            async
+          ></script>
+        </div>
+      </section>
+
       {/* ============ 3 Schritte ============ */}
       <section className="kf-bsh-steps">
         <div className="kf-bsh-steps__inner">

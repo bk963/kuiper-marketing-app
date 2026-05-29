@@ -184,6 +184,11 @@
 .kf-bsh-testi__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: calc(32 * var(--kf-u)); }
 .kf-bsh-testi__grid .kf-vid { border-radius: calc(14 * var(--kf-u)); box-shadow: 0 calc(20 * var(--kf-u)) calc(40 * var(--kf-u)) rgba(11,26,77,0.10); }
 
+/* === ProvenExpert Widget === */
+.kf-bsh-pe { background: #f3f3f3; padding: 56px 20px; display: flex; justify-content: center; }
+.kf-bsh-pe__inner { width: 100%; max-width: 1040px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.kf-bsh-pe__label { font-family: "DM Sans", sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(13,138,165); margin: 0; text-align: center; }
+
 /* === Steps === */
 .kf-bsh-steps { background: #fff; padding: calc(120 * var(--kf-u)) calc(160 * var(--kf-u)); }
 .kf-bsh-steps__inner { max-width: 1425px; margin: 0 auto; }
