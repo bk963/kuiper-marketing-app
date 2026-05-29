@@ -11,6 +11,28 @@ export async function middleware(req: NextRequest) {
   const reqHeaders = new Headers(req.headers);
   reqHeaders.set('x-pathname', p);
 
+  /**
+   * Phase 6 LP-URL-Architecture: marketing.kuiper-safety.de/lp/* → 301 kuiper-safety.de/lp/*
+   * Trigger nur bei direktem Request an marketing.kuiper-safety.de (Host-Header).
+   * NICHT bei Caddy-Proxy von kuiper-web-prod — der Proxy setzt zwar Host=marketing.kuiper-safety.de,
+   * aber auch X-Forwarded-Host=www.kuiper-safety.de (siehe Caddyfile). Wir checken
+   * X-Forwarded-Host → wenn nicht-marketing-Wert oder fehlt = externer Direkt-Request, redirect.
+   * Wenn xfwd=www.kuiper-safety.de → Proxy-Request, durchlassen.
+   */
+  if (p.startsWith('/lp/') || p === '/sitemap-lp.xml') {
+    const host = req.headers.get('host') || '';
+    const xfwdHost = req.headers.get('x-forwarded-host') || '';
+    const isProxyFromWeb = xfwdHost.includes('kuiper-safety.de') && !xfwdHost.includes('marketing.');
+    const isExternalDirect = host.includes('marketing.kuiper-safety.de') && !isProxyFromWeb;
+    if (isExternalDirect) {
+      const url = req.nextUrl.clone();
+      url.host = 'kuiper-safety.de';
+      url.port = '';
+      url.protocol = 'https:';
+      return NextResponse.redirect(url, 301);
+    }
+  }
+
   // Root / leitet zum Admin-Bereich
   if (p === '/') {
     return NextResponse.redirect(new URL('/admin', req.url));

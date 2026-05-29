@@ -48,13 +48,29 @@ export async function generateMetadata({ params }: Props) {
     perPage: 1,
     fields: 'id,internal_name,seo_title,seo_description,seo_noindex,slug',
   });
+  const canonicalUrl = `https://kuiper-safety.de/lp/${slug}`;
   const lp = items[0];
   if (lp) {
+    const title = lp.seo_title || lp.internal_name || `LP: ${slug}`;
+    const description = lp.seo_description || undefined;
     return {
-      title: lp.seo_title || lp.internal_name || `LP: ${slug}`,
-      description: lp.seo_description || undefined,
+      title,
+      description,
       robots: lp.seo_noindex ? 'noindex,nofollow' : undefined,
-      alternates: { canonical: `https://kuiper-safety.de/lp/${slug}` },
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        title,
+        description,
+        url: canonicalUrl,
+        siteName: 'Kuiper Safety Systems',
+        locale: 'de_DE',
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+      },
     };
   }
   // Slug-Fallback (Demo-Modus ohne PB-Record)
@@ -64,7 +80,20 @@ export async function generateMetadata({ params }: Props) {
       title: hardcoded.title,
       description: hardcoded.description,
       robots: 'noindex,nofollow', // Demo-Marketing-App soll nicht in Google
-      alternates: { canonical: `https://kuiper-safety.de/lp/${slug}` },
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        title: hardcoded.title,
+        description: hardcoded.description,
+        url: canonicalUrl,
+        siteName: 'Kuiper Safety Systems',
+        locale: 'de_DE',
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: hardcoded.title,
+        description: hardcoded.description,
+      },
     };
   }
   return { title: 'Landingpage nicht gefunden' };
