@@ -21,6 +21,39 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min für große Imports
 
+/**
+ * PB-Superuser-Auth — Token-Cache in-Memory pro Request.
+ *
+ * Marketing-PB Collection-Rules sind leer (admin-only). Ohne Superuser-Token wirft PB
+ * 404 'Missing or invalid collection context'. Heißt: Endpoint muss self bei PB als
+ * _superusers authenticated und Token an PB-Calls hängen.
+ */
+let _suToken: string | null = null;
+let _suExpires = 0;
+
+async function getSuperuserToken(pbUrl: string): Promise<string> {
+  // 5-min cache
+  if (_suToken && Date.now() < _suExpires) return _suToken;
+  const email = process.env.PB_BLOG_EMAIL || process.env.PB_SUPERUSER_EMAIL || '';
+  const pass = process.env.PB_BLOG_PASS || process.env.PB_SUPERUSER_PASS || '';
+  if (!email || !pass) return '';
+  try {
+    const r = await fetch(`${pbUrl}/api/collections/_superusers/auth-with-password`, {
+      method: 'POST',
+      headers: pbHeaders(),
+      body: JSON.stringify({ identity: email, password: pass }),
+      cache: 'no-store',
+    });
+    if (r.ok) {
+      const d = await r.json();
+      _suToken = String(d.token || '');
+      _suExpires = Date.now() + 5 * 60 * 1000;
+      return _suToken;
+    }
+  } catch { /* swallow */ }
+  return '';
+}
+
 const ALLOWED = new Set([
   'mkt_blog_articles',
   'mkt_blog_categories',
@@ -66,6 +99,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ collection
 
   const pbUrl = process.env.MPB_URL || 'https://pb.kuiper-safety.de';
 
+  // PB-Superuser-Token holen (Collection-Rules sind admin-only)
+  const su = await getSuperuserToken(pbUrl);
+  if (!su) {
+    return NextResponse.json({
+      error: 'PB-Superuser-Auth failed',
+      hint: 'PB_BLOG_EMAIL/PASS env vars not configured or wrong credentials',
+    }, { status: 500 });
+  }
+
   // 4. Source-IDs einsammeln (crm_source_id ODER falls fehlt: original `id` aus CRM)
   const sourceIds: string[] = records
     .map((r: any) => String(r.crm_source_id || r.id || '').trim())
@@ -81,7 +123,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ collection
       try {
         const r = await fetch(
           `${pbUrl}/api/collections/${collection}/records?perPage=${chunkSize}&skipTotal=1&filter=${encodeURIComponent(filter)}&fields=crm_source_id`,
-          { headers: pbHeaders(), cache: 'no-store' }
+          { headers: pbHeaders({ Authorization: su }), cache: 'no-store' }
         );
         if (r.ok) {
           const d = await r.json();
@@ -126,7 +168,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ collection
     try {
       const r = await fetch(`${pbUrl}/api/collections/${collection}/records`, {
         method: 'POST',
-        headers: pbHeaders(),
+        headers: pbHeaders({ Authorization: su }),
         body: JSON.stringify(clean),
       });
       if (r.ok) {
@@ -172,20 +214,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ collection:
   }
 
   const pbUrl = process.env.MPB_URL || 'https://pb.kuiper-safety.de';
+  const su = await getSuperuserToken(pbUrl);
+  if (!su) return NextResponse.json({ error: 'PB-Superuser-Auth failed' }, { status: 500 });
 
   // Count via filter (totalItems wirft sonst 400 dank PB v0.22 Bug)
   let count = 0;
   let migrated = 0;
   try {
     const r1 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=1&filter=${encodeURIComponent('id!=""')}`, {
-      headers: pbHeaders(), cache: 'no-store',
+      headers: pbHeaders({ Authorization: su }), cache: 'no-store',
     });
     if (r1.ok) {
       const d = await r1.json();
       count = d.totalItems || 0;
     }
     const r2 = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=1&filter=${encodeURIComponent('migrated_from_crm=true')}`, {
-      headers: pbHeaders(), cache: 'no-store',
+      headers: pbHeaders({ Authorization: su }), cache: 'no-store',
     });
     if (r2.ok) {
       const d = await r2.json();
@@ -197,7 +241,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ collection:
   let sample: any = null;
   try {
     const r = await fetch(`${pbUrl}/api/collections/${collection}/records?perPage=1&skipTotal=1`, {
-      headers: pbHeaders(), cache: 'no-store',
+      headers: pbHeaders({ Authorization: su }), cache: 'no-store',
     });
     if (r.ok) {
       const d = await r.json();
