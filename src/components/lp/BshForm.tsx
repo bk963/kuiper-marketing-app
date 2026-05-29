@@ -120,10 +120,19 @@ export default function BshForm({
     const maxScroll = w.kuiperEvents?.getMaxScroll?.() ?? 0;
     const sectionTimes = w.kuiperEvents?.getSectionTimes?.() ?? {};
 
+    // A/B-Variant aus Cookie lesen (lp_ab_<slug>)
+    let abVariant: string | null = null;
+    try {
+      const slug = typeof location !== 'undefined' ? location.pathname.replace(/^\/lp\//, '').replace(/\/$/, '') : '';
+      const m = document.cookie.match(new RegExp(`(?:^|;\\s*)lp_ab_${slug}=([ab])`));
+      if (m) abVariant = m[1];
+    } catch { /* swallow */ }
+
     const payload = {
       form_id: formId,
       lead_source: leadSource,
       lp_id: lpId || null,
+      lp_ab_variant: abVariant,
       form_page: typeof location !== 'undefined' ? location.pathname : '',
       submitted_at: new Date().toISOString(),
       form_duration_ms: startedRef.current ? Date.now() - formStartTimeRef.current : 0,

@@ -3,20 +3,23 @@
  *
  * Ablauf:
  *  1. mkt_landingpages by slug (filter: slug="..." && status="live")
- *  2. A/B-Routing (Cookie-Sticky + 50/50-Split) — Phase 3f
+ *  2. A/B-Routing (Cookie-Sticky + 50/50-Split) wenn ab_test_active=true
  *  3. Render:
- *     - Wenn content_json.sections vorhanden → SectionRenderer (Editor-driven)
- *     - Sonst Slug-Fallback auf Default-Sections (generateBshDefaultSections())
- *  4. View-Increment (ab_views_a/b) — Phase 3f
+ *     - Variant A: content_json.sections
+ *     - Variant B: ab_variant_b.sections (Fallback A wenn leer)
+ *     - Slug-Fallback bei kein PB-Record: generateBshDefaultSections()
+ *  4. View-Increment fire-and-forget (ab_views_a/b)
  *
  * SEO:
  *  - Wenn lp.seo_title → Page-Title aus PB
  *  - Wenn lp.seo_noindex → robots noindex,nofollow
+ *  - Canonical immer auf https://kuiper-safety.de/lp/<slug> (Hauptdomain)
  */
 import { notFound } from 'next/navigation';
 import { mktLp } from '@/lib/mkt-lp';
 import SectionRenderer from '@/components/lp/SectionRenderer';
 import { generateBshDefaultSections } from '@/components/lp/sections/defaults';
+import { resolveVariant, pickSections, incrementView } from '@/lib/lp-ab';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -80,20 +83,26 @@ export default async function LpPage({ params }: Props) {
 
   const lp = items[0];
   if (!lp) {
-    // Slug-Fallback: brandschutzhelfer-ausbildung über Default-Sections sichtbar,
-    // damit Bk SOFORT Pixel-Perfect-Demo sehen kann ohne erst LP in PB anlegen zu müssen.
+    // Slug-Fallback: BSH-LP über Default-Sections (Demo ohne PB-Record)
     const defaults = getDefaultSectionsForSlug(slug);
     if (defaults) return <SectionRenderer lp={{ id: null, slug }} sections={defaults} />;
     notFound();
   }
 
-  // Editor-driven: hat sections im content_json?
-  const sections = lp.content_json?.sections || [];
+  // A/B-Routing
+  const variant = await resolveVariant(slug, !!lp.ab_test_active);
+  const sections = pickSections(lp, variant);
+
+  // View-Counter Fire-and-Forget (nur wenn A/B aktiv UND lp_id vorhanden)
+  if (lp.ab_test_active && lp.id) {
+    incrementView(lp.id, variant).catch(() => { /* silent */ });
+  }
+
   if (sections.length > 0) {
     return <SectionRenderer lp={lp} sections={sections} />;
   }
 
-  // Slug-Defaults-Fallback (LP existiert in PB aber content_json ist leer)
+  // Slug-Defaults-Fallback (LP existiert in PB aber sections leer)
   const defaults = getDefaultSectionsForSlug(slug);
   if (defaults) return <SectionRenderer lp={lp} sections={defaults} />;
 
