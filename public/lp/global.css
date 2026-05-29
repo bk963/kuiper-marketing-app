@@ -1,0 +1,323 @@
+@import "tailwindcss";
+
+@theme {
+  /* Kuiper Brand Tokens (aus /opt/kuiper-brand-assets) */
+  --color-kuiper-navy: #0D1B3E;
+  --color-kuiper-navy-deep: #0a1532;
+  --color-kuiper-blue: #1B7FD4;
+  --color-kuiper-cyan: #00C2FF;
+  --color-kuiper-cyan-bright: #14b3e8;
+  --color-kuiper-ink: #1a1a2e;
+  --color-kuiper-ink-soft: #4a5568;
+  --color-kuiper-mist: #f2f4f8;
+  --color-kuiper-border: #e2e8f0;
+
+  /* Typography (aus Figma Frame 240 / Section 1 extrahiert) */
+  --font-display: "Manrope", system-ui, sans-serif;      /* Hero-Headline 800/96 */
+  --font-stat:    "Figtree", system-ui, sans-serif;      /* Stat-Bar 700/48 + 400/20 */
+  --font-button:  "DM Sans", system-ui, sans-serif;      /* CTA-Buttons 700/16 */
+  --font-sans:    "Figtree", system-ui, sans-serif;      /* Body-Fallback — Figtree (preloaded) statt Inter, raus aus LCP-Pfad */
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+body { color: var(--color-kuiper-ink); background: #ffffff; line-height: 1.5; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
+img, svg { display: block; max-width: 100%; height: auto; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Font-Faces — alle self-hosted (DSGVO-konform, keine externen CDNs)
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Manrope — Hero-Display */
+@font-face {
+  font-family: "Manrope"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/manrope-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope"; font-style: normal; font-weight: 800; font-display: swap;
+  src: url("/fonts/manrope-800.woff2") format("woff2");
+}
+
+/* Figtree — Stat-Display */
+@font-face {
+  font-family: "Figtree"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/figtree-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Figtree"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/figtree-700.woff2") format("woff2");
+}
+
+/* DM Sans — Button-Labels */
+@font-face {
+  font-family: "DM Sans"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/dm-sans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Sans"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/dm-sans-700.woff2") format("woff2");
+}
+
+/* Inter komplett entfernt — Figtree übernimmt alle Body+Stat-Renderings */
+
+/* ─────────────────────────────────────────────────────────────────────
+   MOBILE — alle Sektionen verwenden --u = calc(100vw / 1745).
+   Auf Mobile (<768px) würde das Layout um Faktor 0.21 schrumpfen → unlesbar.
+   Lösung: --u auf Mobile auf einen viel größeren Wert (≈100vw/420) setzen,
+   damit Inhalt halbwegs proportional aber lesbar bleibt. Plus Grid-Templates
+   auf 1-Spalter, Section-Höhen auf auto.
+   ───────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Höhere effektive --u für alle Sektionen — Schrift wird lesbar */
+  .kf-hero,
+  .kf-s2, .kf-s3, .kf-s4, .kf-s5, .kf-s6, .kf-s7, .kf-s8, .kf-s9, .kf-s10, .kf-s11, .kf-s12,
+  .kf-kh, .kf-kintro, .kf-kgrid, .kf-kmap {
+    --u: calc(100vw / 480) !important;
+  }
+
+  /* Section + Inner-Container: feste Höhen weg, position: static, alles im normalen Fluss */
+  .kf-hero, .kf-s2, .kf-s3, .kf-s4, .kf-s5, .kf-s6, .kf-s7, .kf-s8, .kf-s9, .kf-s10 {
+    height: auto !important;
+    min-height: auto !important;
+  }
+  .kf-hero__frame,
+  .kf-s2__inner,
+  .kf-s3__inner,
+  .kf-s4__inner,
+  .kf-s5__inner,
+  .kf-s6__inner,
+  .kf-s7__inner,
+  .kf-s8__inner,
+  .kf-s9__inner,
+  .kf-s10__inner {
+    position: static !important;
+    height: auto !important;
+    min-height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+    padding: 32px 20px !important;
+    width: 100% !important;
+  }
+
+  /* Hero — zentriert auf Mobile */
+  .kf-hero__bg { position: absolute !important; z-index: 0; height: 100% !important; min-height: 600px; }
+  .kf-hero__overlay { display: none !important; }
+  .kf-hero__overlay-1 { display: block !important; opacity: 0.55; }
+  .kf-hero__header,
+  .kf-hero__content,
+  .kf-hero__statbar {
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important; top: auto !important; bottom: auto !important; right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+  .kf-hero { min-height: 600px !important; padding: 24px 20px 40px !important; box-sizing: border-box; }
+  .kf-hero__header {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 32px;
+  }
+  .kf-hero__logo img { width: 140px !important; height: auto !important; }
+  .kf-hero__nav { display: none !important; }
+  .kf-hero__content {
+    margin-top: auto !important;
+    margin-bottom: 32px;
+    text-align: center;
+    align-items: center;
+  }
+  .kf-hero__headline { font-size: 44px !important; line-height: 1.05 !important; letter-spacing: -1px !important; text-align: center; }
+  .kf-hero__subline { font-size: 16px !important; line-height: 1.5 !important; margin-top: 16px !important; text-align: center; }
+  .kf-hero__cta-button { padding: 14px 22px !important; font-size: 15px !important; margin-top: 24px !important; }
+  .kf-hero__statbar {
+    background: rgba(11, 26, 77, 0.7) !important;
+    padding: 16px !important;
+    border-radius: 12px;
+  }
+  .kf-hero__features { display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 12px !important; }
+  .kf-hero__feature { padding-left: 8px !important; }
+  .kf-hero__feature-num { font-size: 20px !important; line-height: 1.2 !important; letter-spacing: 0 !important; }
+  .kf-hero__feature-label { font-size: 11px !important; line-height: 1.2 !important; }
+  .kf-hero__chat { display: none !important; }
+
+  /* Section 2 — Cyan-Problem — zentriert auf Mobile */
+  .kf-s2 { min-height: 0 !important; }
+  .kf-s2__top { grid-template-columns: 1fr !important; gap: 16px !important; text-align: center !important; }
+  .kf-s2__headline { font-size: 28px !important; line-height: 1.2 !important; letter-spacing: 0 !important; width: 100% !important; text-align: center !important; }
+  .kf-s2__copy { padding: 0 !important; width: 100% !important; gap: 16px !important; align-items: center; }
+  .kf-s2__body { font-size: 15px !important; line-height: 1.55 !important; text-align: center !important; }
+  .kf-s2__closer { font-size: 16px !important; line-height: 1.4 !important; letter-spacing: 0 !important; text-align: center !important; }
+  .kf-s2__features { grid-template-columns: 1fr !important; gap: 8px !important; height: auto !important; width: 100% !important; }
+  .kf-s2__feature { justify-content: center; }
+  .kf-s2__label { font-size: 14px !important; line-height: 1.4 !important; text-align: left; }
+
+  /* Section 3 — Bestandsaufnahme — Inner ist flex column, also Photo unter Headline */
+  .kf-s3__inner { gap: 24px !important; }
+  .kf-s3__header { flex-direction: column !important; height: auto !important; padding: 0 !important; gap: 24px !important; display: flex !important; }
+  .kf-s3__hl-sl {
+    position: relative !important;
+    padding-top: 0 !important;
+    width: 100% !important;
+    left: auto !important; top: auto !important;
+    order: 1;
+  }
+  .kf-s3__img {
+    position: relative !important;
+    left: auto !important; top: auto !important;
+    width: 100% !important;
+    height: 240px !important;
+    order: 2;
+  }
+  .kf-s3__img img {
+    position: relative !important; left: auto !important; top: auto !important;
+    width: 100% !important; height: 100% !important;
+    object-fit: contain !important;
+  }
+  .kf-s3__headline { font-size: 28px !important; line-height: 1.15 !important; width: 100% !important; }
+  .kf-s3__body { font-size: 15px !important; line-height: 1.55 !important; width: 100% !important; }
+  .kf-s3__cards {
+    position: relative !important; left: auto !important; top: auto !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important; padding: 0 !important;
+    width: 100% !important; height: auto !important;
+  }
+  .kf-s3__card {
+    width: 100% !important; height: auto !important;
+    padding: 24px !important;
+  }
+  .kf-s3__num { font-size: 36px !important; line-height: 1.1 !important; height: auto !important; }
+  .kf-s3__title { font-size: 18px !important; }
+  .kf-s3__copy { font-size: 14px !important; line-height: 1.5 !important; }
+  .kf-s3__body2 { width: 100% !important; }
+
+  /* Section 4 — SafetyScore */
+  .kf-s4__left,
+  .kf-s4__right,
+  .kf-s4__photo-large,
+  .kf-s4__photo-small {
+    position: relative !important;
+    left: auto !important; top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  .kf-s4__photo-large, .kf-s4__photo-small { height: 200px !important; }
+  .kf-s4__photo-large img, .kf-s4__photo-small img { width: 100% !important; left: auto !important; }
+  .kf-s4__right { padding: 24px !important; min-height: 360px !important; }
+  .kf-s4__headline { font-size: 28px !important; line-height: 1.15 !important; }
+  .kf-s4__body, .kf-s4__closer { font-size: 14px !important; line-height: 1.5 !important; width: 100% !important; }
+  .kf-s4__feature-text { font-size: 13px !important; }
+  .kf-s4__features, .kf-s4__feature { width: 100% !important; height: auto !important; }
+  .kf-s4__quote-text { font-size: 16px !important; line-height: 1.3 !important; }
+  .kf-s4__score-head, .kf-s4__donut, .kf-s4__score-num, .kf-s4__status {
+    position: relative !important; left: auto !important; top: auto !important;
+  }
+  .kf-s4__donut { margin: 16px auto; width: 200px !important; height: 200px !important; }
+  .kf-s4__score-num { width: 200px !important; height: 200px !important; font-size: 56px !important; margin: 0 auto; }
+  .kf-s4__glow { display: none !important; }
+
+  /* Section 5 — System */
+  .kf-s5__header { grid-template-columns: 1fr !important; height: auto !important; width: 100% !important; max-width: 100% !important; }
+  .kf-s5__headline { font-size: 28px !important; line-height: 1.15 !important; width: 100% !important; max-width: 100% !important; overflow-wrap: break-word !important; }
+  .kf-s5__body { font-size: 14px !important; width: 100% !important; max-width: 100% !important; overflow-wrap: break-word !important; }
+  .kf-s5__closer { font-size: 15px !important; width: 100% !important; max-width: 100% !important; overflow-wrap: break-word !important; }
+  .kf-s5__cards { width: 100% !important; max-width: 100% !important; }
+  .kf-s5__card { width: 100% !important; max-width: 100% !important; padding: 20px !important; box-sizing: border-box !important; min-width: 0 !important; }
+  .kf-s5__card-body { min-width: 0 !important; flex: 1 1 0 !important; max-width: 100% !important; overflow: hidden !important; }
+  .kf-s5__card-text, .kf-s5__card-title { width: 100% !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; }
+  .kf-s5__browser { width: 100% !important; height: auto !important; aspect-ratio: 1185/598; }
+  .kf-s5__screens { width: 100% !important; }
+
+  /* Section 6 — Setup */
+  .kf-s6__inner { padding: 32px 20px !important; }
+  .kf-s6__left { width: 100% !important; }
+  .kf-s6__headline { font-size: 26px !important; line-height: 1.15 !important; width: 100% !important; }
+  .kf-s6__body, .kf-s6__body2 { font-size: 14px !important; width: 100% !important; }
+  .kf-s6__right { padding-right: 0 !important; width: 100% !important; }
+  .kf-s6__card { flex: 0 0 calc(100% - 8px) !important; }
+  .kf-s6__caption { font-size: 16px !important; line-height: 1.3 !important; }
+  .kf-s6::before { display: none !important; }
+
+  /* Section 7 — UseCases */
+  .kf-s7__inner { padding: 32px 20px !important; }
+  .kf-s7__left {
+    width: 100% !important; height: 280px !important;
+    align-self: auto !important; margin: 0 !important;
+  }
+  .kf-s7__right { width: 100% !important; gap: 24px !important; }
+  .kf-s7__headline { font-size: 28px !important; line-height: 1.15 !important; }
+  .kf-s7__body { font-size: 14px !important; width: 100% !important; }
+  .kf-s7__accordion { width: 100% !important; }
+  .kf-s7__item-title { font-size: 16px !important; }
+  .kf-s7::after { display: none !important; }
+
+  /* Section 8 — Trust — zentriert auf Mobile */
+  .kf-s8__top { grid-template-columns: 1fr !important; gap: 24px !important; height: auto !important; text-align: center !important; }
+  .kf-s8__header { align-items: center !important; }
+  .kf-s8__headline, .kf-s8__body { text-align: center !important; }
+  .kf-s8__headline { font-size: 26px !important; line-height: 1.2 !important; }
+  .kf-s8__body { font-size: 14px !important; }
+  .kf-s8__stat { align-items: center !important; text-align: center !important; }
+  .kf-s8__stat-num { font-size: 80px !important; line-height: 1 !important; letter-spacing: -2px !important; }
+  .kf-s8__stat-label { font-size: 16px !important; }
+  .kf-s8__footer { flex-direction: column !important; height: auto !important; align-items: center !important; text-align: center !important; gap: 16px !important; }
+  .kf-s8__tuv-text { width: 100% !important; font-size: 14px !important; text-align: center !important; }
+  .kf-s8__bg { display: none !important; }
+
+  /* Section 9 — CTA — zentriert auf Mobile */
+  .kf-s9__inner { grid-template-columns: 1fr !important; gap: 16px !important; }
+  .kf-s9__card { height: auto !important; padding: 28px !important; gap: 24px; text-align: center; align-items: center; }
+  .kf-s9__body { align-items: center !important; }
+  .kf-s9__eyebrow, .kf-s9__headline, .kf-s9__text { text-align: center !important; }
+  .kf-s9__eyebrow { font-size: 13px !important; }
+  .kf-s9__headline { font-size: 22px !important; line-height: 1.2 !important; }
+  .kf-s9__text { font-size: 14px !important; }
+  .kf-s9__btn { font-size: 14px !important; padding: 10px 18px !important; }
+
+  /* Section 10 — Kontakt — zentriert auf Mobile */
+  .kf-s10__inner { grid-template-columns: 1fr !important; gap: 32px !important; align-items: center !important; }
+  .kf-s10__left { align-items: center !important; text-align: center !important; }
+  .kf-s10__top { flex-direction: column !important; align-items: center !important; gap: 20px !important; }
+  .kf-s10__photo { width: 220px !important; height: 220px !important; border-radius: 50% !important; margin: 0 auto !important; }
+  .kf-s10__headline { font-size: 26px !important; line-height: 1.2 !important; text-align: center !important; }
+  .kf-s10__bottom { align-items: center !important; }
+  .kf-s10__body { font-size: 15px !important; width: 100% !important; text-align: center !important; }
+  .kf-s10__contact { align-items: center !important; }
+  .kf-s10__cta { padding: 24px !important; }
+  .kf-s10__cta-eyebrow, .kf-s10__cta-title { text-align: center !important; }
+  .kf-s10__cta-title { font-size: 20px !important; line-height: 1.2 !important; }
+  .kf-s10__cta-card { padding: 16px !important; gap: 12px !important; }
+  .kf-s10__cta-h { font-size: 15px !important; }
+  .kf-s10__cta-t { font-size: 12px !important; }
+
+  /* Footer */
+  .kf-s12__inner { padding: 32px 20px !important; gap: 24px !important; }
+  .kf-s12__row { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
+  .kf-s12__logo { width: 180px !important; }
+  .kf-s12__cols { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .kf-s12__bottom { flex-direction: row !important; flex-wrap: wrap !important; }
+  .kf-s12__totop { align-self: flex-end; }
+
+  /* Kontakt-Page */
+  .kf-kh__inner { padding: 16px 20px !important; flex-direction: row !important; }
+  .kf-kh__home img { width: 140px !important; height: auto !important; }
+  .kf-kh__nav { display: none !important; }
+  .kf-kintro { padding: 32px 20px !important; }
+  .kf-kintro__headline { font-size: 32px !important; line-height: 1.15 !important; }
+  .kf-kintro__body { font-size: 15px !important; line-height: 1.55 !important; }
+  .kf-kgrid { padding: 0 20px 32px !important; }
+  .kf-kgrid__inner { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .kf-kform { padding: 28px !important; }
+  .kf-kform__title { font-size: 22px !important; }
+  .kf-kform__row { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .kf-kside__avatar { width: 120px !important; height: 120px !important; }
+  .kf-kmap { padding: 0 20px 32px !important; }
+  .kf-kmap iframe { height: 320px !important; }
+}

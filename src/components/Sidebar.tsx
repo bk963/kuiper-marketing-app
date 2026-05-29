@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { href: '#content-hub', label: 'CONTENT-HUB', icon: '', hub: true },
   { href: '/admin/content/blog', label: 'Blog', icon: '📰' },
   { href: '/admin/content/seo-intel', label: 'SEO-Intel', icon: '🎯' },
+  { href: '/admin/content/landingpages', label: 'Landingpages', icon: '🎨' },
   { href: '/admin/content/site', label: 'Site-Pages', icon: '🌐' },
   { href: '/admin/content/templates', label: 'Templates', icon: '📐' },
   { href: '/admin/content/forms', label: 'Formulare', icon: '📋' },
