@@ -13,7 +13,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default async function ArticlesPage() {
   await requireAdmin();
-  const { items, error } = await mktBlog.articles({ perPage: 300, sort: '-updated', fields: 'id,title,slug,status,author,category_id,published_at,updated' });
+  const { items, error } = await mktBlog.articles({ perPage: 300, sort: '-created', fields: 'id,title,slug,status,author,category_id,published_at,updated' });
 
   return (
     <div className="max-w-7xl">

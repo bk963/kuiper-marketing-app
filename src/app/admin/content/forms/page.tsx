@@ -17,7 +17,7 @@ export default async function FormsPage() {
     submissions: await mktFormsCounts.submissions(),
   };
   const { items, error } = await mktForms.forms({
-    perPage: 100, sort: '-updated',
+    perPage: 100, sort: '-created',
     fields: 'id,name,description,status,fields,updated',
   });
 

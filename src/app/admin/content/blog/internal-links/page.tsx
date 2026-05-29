@@ -12,7 +12,7 @@ const POSITION_COLOR: Record<string, string> = {
 
 export default async function InternalLinksPage() {
   await requireAdmin();
-  const { items, error } = await mktBlog.internalLinks({ perPage: 300, sort: '-updated', fields: 'id,source_article_id,target_article_id,anchor_text,position,automatic,updated' });
+  const { items, error } = await mktBlog.internalLinks({ perPage: 300, sort: '-created', fields: 'id,source_article_id,target_article_id,anchor_text,position,automatic,updated' });
 
   return (
     <div className="max-w-7xl">

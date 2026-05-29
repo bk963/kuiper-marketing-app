@@ -20,7 +20,7 @@ export default async function SitePagesOverview() {
     draft: await mktSiteCounts.pagesDraft(),
   };
   const { items, error } = await mktSite.pages({
-    perPage: 200, sort: '-updated',
+    perPage: 200, sort: '-created',
     fields: 'id,title,slug,status,template_type,updated,published_at,seo_title',
   });
 

@@ -22,7 +22,7 @@ export default async function TemplatesPage() {
     active: await mktSiteCounts.templatesActive(),
   };
   const { items, error } = await mktSite.templates({
-    perPage: 200, sort: '-updated',
+    perPage: 200, sort: '-created',
     fields: 'id,name,type,status,description,updated',
   });
 

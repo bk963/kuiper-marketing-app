@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PillarsPage() {
   await requireAdmin();
-  const { items, error } = await mktBlog.pillars({ perPage: 100, sort: '-updated', fields: 'id,title,slug,status,published_at,focus_keyword' });
+  const { items, error } = await mktBlog.pillars({ perPage: 100, sort: '-created', fields: 'id,title,slug,status,published_at,focus_keyword' });
 
   return (
     <div className="max-w-6xl">
