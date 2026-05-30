@@ -27,6 +27,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Script src="/scripts/kuiper-consent.v1.js" strategy="beforeInteractive" />
             <Script src="/scripts/kuiper-ga4.v1.js" strategy="afterInteractive" />
             <Script src="/scripts/kuiper-tracking.v1.js" strategy="afterInteractive" />
+            {/* Microsoft Clarity — Consent-gated (Kategorie statistik), inline-Snippet */}
+            <Script id="kuiper-clarity-loader" strategy="afterInteractive">
+              {`(function(){var CLARITY_ID="wwb7ihptp7";function load(){if(window.__clarityLoaded)return;window.__clarityLoaded=true;(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script",CLARITY_ID)}function check(){try{if(window.kuiperConsent&&window.kuiperConsent.has("statistik"))load()}catch(e){}}check();if(window.kuiperConsent&&typeof window.kuiperConsent.on==="function"){window.kuiperConsent.on("update",check)}else{var n=0;var iv=setInterval(function(){check();if(window.__clarityLoaded||++n>=15)clearInterval(iv)},2000)}})();`}
+            </Script>
           </>
         )}
         {children}
