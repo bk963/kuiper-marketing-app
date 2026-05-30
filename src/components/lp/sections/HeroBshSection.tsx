@@ -8,9 +8,13 @@
  *  - TÜV-Block unten (Logo + Title + Body, Petrol-Background)
  *
  * Form wird über props.formId / leadSource / endpoint an <BshForm /> übergeben.
+ *
+ * Phase 1b 2026-05-30: Texte via <EditableText fieldKey="..."> — in Apex-LP read-only,
+ * in InlineEditor mit EditableContext.Provider editierbar.
  */
 import BshForm from '../BshForm';
 import { Video } from './_helpers';
+import { EditableText } from '../editor/EditableText';
 
 export type HeroBshConfig = {
   eyebrow?: string;
@@ -35,18 +39,35 @@ export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig
   return (
     <section className="kf-bsh-hero" id="anfrage">
       <div className="kf-bsh-hero__top">
-        {config.eyebrow && <span className="kf-bsh-hero__eyebrow">{config.eyebrow}</span>}
+        {config.eyebrow && (
+          <EditableText as="span" fieldKey="eyebrow" className="kf-bsh-hero__eyebrow">
+            {config.eyebrow}
+          </EditableText>
+        )}
         <h1 className="kf-bsh-hero__headline">
-          {config.headlinePre} <span className="kf-bsh-hero__accent">{config.headlineAccent}</span>
+          <EditableText as="span" fieldKey="headlinePre">
+            {config.headlinePre}
+          </EditableText>{' '}
+          <EditableText as="span" fieldKey="headlineAccent" className="kf-bsh-hero__accent">
+            {config.headlineAccent}
+          </EditableText>
         </h1>
-        {config.subline && <p className="kf-bsh-hero__subline">{config.subline}</p>}
+        {config.subline && (
+          <EditableText as="p" fieldKey="subline" className="kf-bsh-hero__subline">
+            {config.subline}
+          </EditableText>
+        )}
       </div>
 
       <div className="kf-bsh-hero__frame">
         {config.videoSrc && (
           <div className="kf-bsh-hero__video">
             <Video videoId="hero-bsh" src={config.videoSrc} poster={config.videoPoster} />
-            {config.videoCaption && <p className="kf-bsh-hero__video-caption">{config.videoCaption}</p>}
+            {config.videoCaption && (
+              <EditableText as="p" fieldKey="videoCaption" className="kf-bsh-hero__video-caption">
+                {config.videoCaption}
+              </EditableText>
+            )}
           </div>
         )}
         <div className="kf-bsh-hero__form-wrap">
@@ -66,8 +87,16 @@ export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig
             <img className="kf-bsh-hero__tuev-logo" src={config.tuevLogo} alt="TÜV Rheinland zertifiziert-Logo" loading="lazy" />
           )}
           <div className="kf-bsh-hero__tuev-text">
-            {config.tuevTitle && <h3 className="kf-bsh-hero__tuev-title">{config.tuevTitle}</h3>}
-            {config.tuevBody && <p className="kf-bsh-hero__tuev-body">{config.tuevBody}</p>}
+            {config.tuevTitle && (
+              <EditableText as="h3" fieldKey="tuevTitle" className="kf-bsh-hero__tuev-title">
+                {config.tuevTitle}
+              </EditableText>
+            )}
+            {config.tuevBody && (
+              <EditableText as="p" fieldKey="tuevBody" className="kf-bsh-hero__tuev-body">
+                {config.tuevBody}
+              </EditableText>
+            )}
           </div>
         </div>
       )}
