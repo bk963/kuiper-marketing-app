@@ -2,9 +2,12 @@
  * Bing Ads Offline Conversion Import — Server-Side Fire.
  *
  * Phase T4 (2026-05-30) — Tracking-Maximum-Sprint.
- *
- * Bing uses SOAP, not REST. ApplyOfflineConversions via CampaignManagement-Service.
- * Doku: https://learn.microsoft.com/en-us/advertising/campaign-management-service/applyofflineconversions
+ * Phase T4b (2026-05-30) — SOAP-Format laut Microsoft-Doku korrigiert:
+ *   - Header xmlns direkt im Bing-namespace (kein i:-prefix für jeden tag)
+ *   - Body-Elements im default Bing-namespace (kein a:-prefix mehr)
+ *   - i:nil="true" für optional-fields (XMLSchema-instance namespace)
+ *   - AlphaORDER: ConversionCurrencyCode/Name/Time/Value/MicrosoftClickId
+ *   - https://learn.microsoft.com/en-us/advertising/campaign-management-service/applyofflineconversions
  *
  * Voraussetzung: msclkid muss im Lead persistiert sein.
  * Token-Status: alle Bing-Ads-Tokens vollständig (OAuth + DevToken + Customer + Account + ConversionGoal).
@@ -58,32 +61,43 @@ export async function fireBing(lead: LeadForCapi): Promise<CapiResult> {
 
   const value = typeof lead.revenue === 'number' && lead.revenue > 0 ? lead.revenue : 0;
   const convTime = lead.submitted_at || new Date().toISOString();
-  // Bing braucht: "YYYY-MM-DDTHH:MM:SS"
-  const formattedTime = convTime.replace(/\.\d+Z$/, '').replace('Z', '');
+  // Bing-Format: "YYYY-MM-DDTHH:MM:SS" (kein Z, keine ms)
+  const formattedTime = convTime.replace(/\.\d+Z?$/, '').replace('Z', '');
 
+  // Microsoft-Doku-konforme SOAP-Envelope:
+  // - Header xmlns="...CampaignManagement/v13" für ALLE child-tags (kein prefix)
+  // - Body-Operation im default Bing-namespace
+  // - OfflineConversion-Felder ohne namespace-prefix (im outer xmlns vererbt)
+  // - AlphaORDER der Felder
+  // - i:nil="true" für optionale Felder, "i" deklariert im s:Envelope
   const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-               xmlns:i="https://bingads.microsoft.com/CampaignManagement/v13">
-  <soap:Header>
-    <i:DeveloperToken>${escapeXml(devToken)}</i:DeveloperToken>
-    <i:CustomerAccountId>${escapeXml(accountId)}</i:CustomerAccountId>
-    <i:CustomerId>${escapeXml(customerId)}</i:CustomerId>
-    <i:AuthenticationToken>${escapeXml(access)}</i:AuthenticationToken>
-  </soap:Header>
-  <soap:Body>
+<s:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Header xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
+    <Action mustUnderstand="1">ApplyOfflineConversions</Action>
+    <AuthenticationToken i:nil="false">${escapeXml(access)}</AuthenticationToken>
+    <CustomerAccountId i:nil="false">${escapeXml(accountId)}</CustomerAccountId>
+    <CustomerId i:nil="false">${escapeXml(customerId)}</CustomerId>
+    <DeveloperToken i:nil="false">${escapeXml(devToken)}</DeveloperToken>
+  </s:Header>
+  <s:Body>
     <ApplyOfflineConversionsRequest xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
-      <OfflineConversions xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.AdCenter.Advertiser.CampaignManagement.Api.DataContracts.V13">
-        <a:OfflineConversion>
-          <a:ConversionCurrencyCode>EUR</a:ConversionCurrencyCode>
-          <a:ConversionName>${escapeXml(goalName)}</a:ConversionName>
-          <a:ConversionTime>${escapeXml(formattedTime)}</a:ConversionTime>
-          <a:ConversionValue>${value}</a:ConversionValue>
-          <a:MicrosoftClickId>${escapeXml(lead.msclkid)}</a:MicrosoftClickId>
-        </a:OfflineConversion>
+      <OfflineConversions i:nil="false">
+        <OfflineConversion>
+          <AdjustmentValue i:nil="true"/>
+          <ConversionCurrencyCode i:nil="false">EUR</ConversionCurrencyCode>
+          <ConversionName i:nil="false">${escapeXml(goalName)}</ConversionName>
+          <ConversionTime>${escapeXml(formattedTime)}</ConversionTime>
+          <ConversionValue i:nil="false">${value}</ConversionValue>
+          <ExternalAttributionCredit i:nil="true"/>
+          <ExternalAttributionModel i:nil="true"/>
+          <HashedEmailAddress i:nil="true"/>
+          <HashedPhoneNumber i:nil="true"/>
+          <MicrosoftClickId i:nil="false">${escapeXml(lead.msclkid)}</MicrosoftClickId>
+        </OfflineConversion>
       </OfflineConversions>
     </ApplyOfflineConversionsRequest>
-  </soap:Body>
-</soap:Envelope>`;
+  </s:Body>
+</s:Envelope>`;
 
   try {
     const res = await fetch('https://campaign.api.bingads.microsoft.com/Api/Advertiser/CampaignManagement/v13/CampaignManagementService.svc', {
@@ -95,7 +109,17 @@ export async function fireBing(lead: LeadForCapi): Promise<CapiResult> {
       body: soap,
     });
     const txt = await res.text();
-    if (res.ok && !txt.includes('<faultcode>') && !txt.includes('<s:Fault>')) return { status: 'sent' };
+    // SOAP-Fault-Check (Bing returnt HTTP 200 selbst bei Fehler)
+    if (txt.includes('<s:Fault>') || txt.includes('<faultcode>')) {
+      const m = txt.match(/<faultstring[^>]*>([^<]+)</);
+      return { status: 'error', error: m ? m[1].slice(0, 200) : `SOAP-Fault: ${txt.slice(0, 200)}` };
+    }
+    // BatchError = teilweise Fehler trotz Success
+    if (txt.includes('<BatchError>') && !txt.includes('<BatchErrors i:nil="true"')) {
+      const m = txt.match(/<Message[^>]*>([^<]+)</);
+      return { status: 'error', error: m ? `batch: ${m[1].slice(0, 180)}` : 'batch_error' };
+    }
+    if (res.ok && txt.includes('ApplyOfflineConversionsResponse')) return { status: 'sent' };
     return { status: 'error', error: `HTTP ${res.status}: ${txt.slice(0, 200)}` };
   } catch (e: any) {
     return { status: 'error', error: String(e?.message || e).slice(0, 200) };
