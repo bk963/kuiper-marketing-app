@@ -5,13 +5,18 @@
  * Architektur:
  *  - Rendert SectionRenderer (= 1:1 zur Apex-LP) im Admin-Context
  *  - Jede Section wird in <SectionEditFrame> wrapped → Hover-Outline + Toolbar
- *  - Text-Felder bekommen contenteditable=true mit onBlur → patchSectionConfig
+ *  - Phase 1b: EditableContext.Provider gibt onPatchField an Sections; Sections
+ *    rendern <EditableText fieldKey="..."> die im Edit-Mode contenteditable werden.
  *  - State-Verwaltung lokal (currentSections), Save schickt komplettes content_json
  *
- * Phase 1 (heute):
- *  - Foundation: render + Section-Hover-Outline
- *  - Inline-Text-Edit für sichtbare Texte (Headlines, Subtexte, CTAs)
- *  - Manuelle Save-Button + Dirty-Indicator
+ * Phase 1 (DOM-Hack) — DEPRECATED:
+ *  - post-mount querySelector → contenteditable
+ *  - Brach bei React-Re-Render, fehlte für Hero-Headline-Accent
+ *
+ * Phase 1b (heute 2026-05-30):
+ *  - Section-Components rendern <EditableText> als first-class component
+ *  - Stable durch React-Lifecycle
+ *  - Array-Fields (cards, people, items) bleiben unverändert → Phase 1c
  *
  * Folge-Phasen:
  *  - 2 Auto-Save-Debounce
@@ -21,11 +26,12 @@
  *  - 6 Inline-Image-Upload
  *  - 7 Settings-Sidebar für non-inline Configs
  */
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import type { BshSection, BshSectionType } from '../sections/types';
 import { SECTION_COMPONENTS } from '../sections/registry';
 import LpFrame from '../LpFrame';
+import { EditableContext } from './EditableText';
 
 const STATUS_COLOR: Record<string, string> = {
   live: 'bg-emerald-100 text-emerald-800',
@@ -52,7 +58,7 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
     setDirty(JSON.stringify(sections) !== JSON.stringify(initialSections));
   }, [sections, initialSections]);
 
-  /** Section-Config-Patch via path-pfeil */
+  /** Section-Config-Patch: single field-update */
   const patchSectionConfig = useCallback((sectionId: string, key: string, value: any) => {
     setSections(prev => prev.map(s => {
       if (s.id !== sectionId) return s;
@@ -96,7 +102,7 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
             {lp.status || 'draft'}
           </span>
           {dirty && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-100 text-amber-800">Ungespeichert</span>}
-          <span className="text-[11px] text-slate-500">{sections.length} Sections · Inline-Edit-Mode</span>
+          <span className="text-[11px] text-slate-500">{sections.length} Sections · Inline-Edit-Mode (Phase 1b)</span>
         </div>
         <div className="flex items-center gap-2">
           {lastSavedAt && !dirty && (
@@ -121,7 +127,7 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
 
       {/* Edit-Hint-Banner */}
       <div className="px-5 py-2 bg-brand/5 border-b border-brand/20 text-xs text-slate-700">
-        💡 Klick auf Text um zu editieren · Tab/Enter um zu speichern · Section-Toolbar (Folge-Phase)
+        💡 Klick auf Text um zu editieren · Enter speichert · Esc bricht ab · Section-Toolbar (Phase 3)
       </div>
 
       {/* Live-Rendered LP mit Edit-Wrappern */}
@@ -182,18 +188,23 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
           outline: 2px solid rgb(48, 196, 237);
           background: rgba(48, 196, 237, 0.1);
         }
+        /* Placeholder für leere editable-Felder */
+        .inline-editor-canvas [data-inline-edit]:empty::before {
+          content: attr(data-placeholder);
+          color: rgba(0, 0, 0, 0.3);
+          font-style: italic;
+        }
       `}</style>
     </div>
   );
 }
 
 /**
- * SectionEditFrame — wrapped um eine Section, fügt Edit-Mode-Attrs hinzu.
+ * SectionEditFrame — wrapped um eine Section, fügt Edit-Mode-Attrs hinzu
+ * + provided EditableContext mit onPatchField an die Section-Component.
  *
- * Statt SECTION_COMPONENTS direkt zu rendern, rendern wir den Section-Component
- * mit gepatchtem config-Object dessen Felder via Inline-Edit verändert werden.
- * Für jetzt einfaches Pattern: TextInlineWrappers proxien spezifische Configs
- * an die Section-Components.
+ * Section-Components rendern EditableText-Tags die durch den Context
+ * automatisch in den Edit-Mode wechseln (contenteditable + onBlur-Save).
  */
 function SectionEditFrame({
   section,
@@ -216,99 +227,14 @@ function SectionEditFrame({
     );
   }
 
-  // Wrappe Config mit Inline-Edit-Proxy-Strings
-  // Sehr simple Strategie: rendere zuerst Section, dann patche per useEffect ContentEditable-Marker
-  // Phase 1 nutzt einfacheres Pattern — Section-Component mit modified-config das Edit-Marker enthält
+  // EditableContext liefert onPatchField an die <EditableText>-Childs in der Section.
+  // Jeder SectionEditFrame hat seinen eigenen onPatchConfig (Closure über section.id),
+  // also bekommt jede Section ihren eigenen Context-Scope.
   return (
     <div data-edit-section data-section-type={section.type} data-section-id={section.id}>
-      <InlineConfigProxy section={section} onPatchConfig={onPatchConfig}>
+      <EditableContext.Provider value={{ editable: true, onPatchField: onPatchConfig }}>
         <Comp config={section.config} lpId={section.id} />
-      </InlineConfigProxy>
+      </EditableContext.Provider>
     </div>
   );
-}
-
-/**
- * InlineConfigProxy — durchsucht children-DOM nach Section-Text-Inhalten,
- * markiert sie als data-inline-edit + contenteditable.
- *
- * Phase 1: post-mount-Mutation. DOM-Hack aber pragmatisch.
- * Phase 2 (besser): Section-Components selbst rendern Inline-Edit-Spans.
- */
-function InlineConfigProxy({
-  section,
-  onPatchConfig,
-  children,
-}: {
-  section: BshSection;
-  onPatchConfig: (key: string, value: any) => void;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-
-    // Map: CSS-Selector → config-key
-    // Diese Patterns basieren auf den BSH-Section-Klassen.
-    const TEXT_MAPS: { selector: string; key: string }[] = [
-      { selector: '.kf-bsh-hero__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-hero__headline', key: 'headlinePre' },
-      { selector: '.kf-bsh-hero__accent', key: 'headlineAccent' },
-      { selector: '.kf-bsh-hero__subline', key: 'subline' },
-      { selector: '.kf-bsh-usps__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-usps__headline', key: 'headline' },
-      { selector: '.kf-bsh-story__headline', key: 'headlinePre' },
-      { selector: '.kf-bsh-testi__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-testi__headline', key: 'headline' },
-      { selector: '.kf-bsh-steps__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-steps__headline', key: 'headlinePre' },
-      { selector: '.kf-bsh-content__headline', key: 'headline' },
-      { selector: '.kf-bsh-hybrid__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-hybrid__headline', key: 'headlinePre' },
-      { selector: '.kf-bsh-team__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-team__headline', key: 'headline' },
-      { selector: '.kf-bsh-loc__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-faq__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-final__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-open__eyebrow', key: 'eyebrow' },
-      { selector: '.kf-bsh-open__headline', key: 'headline' },
-    ];
-
-    const cleanups: Array<() => void> = [];
-
-    for (const { selector, key } of TEXT_MAPS) {
-      const el = root.querySelector(selector) as HTMLElement | null;
-      if (!el) continue;
-      // Skip wenn schon initialized (id-marker)
-      if (el.dataset.inlineEdit === key) continue;
-      el.dataset.inlineEdit = key;
-      el.setAttribute('contenteditable', 'true');
-      el.setAttribute('spellcheck', 'false');
-
-      const onBlur = () => {
-        const newVal = el.textContent || '';
-        if (newVal !== section.config[key]) {
-          onPatchConfig(key, newVal);
-        }
-      };
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          el.blur();
-        }
-      };
-      el.addEventListener('blur', onBlur);
-      el.addEventListener('keydown', onKeyDown);
-      cleanups.push(() => {
-        el.removeEventListener('blur', onBlur);
-        el.removeEventListener('keydown', onKeyDown);
-      });
-    }
-
-    return () => cleanups.forEach(fn => fn());
-  }, [section.config, onPatchConfig]);
-
-  return <div ref={ref}>{children}</div>;
 }

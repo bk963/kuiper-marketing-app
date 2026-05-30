@@ -1,7 +1,10 @@
 /**
  * BSH-Team-Section — kf-bsh-team
  * Pos 10 in der Default-BSH-LP. N Personen-Cards mit Photo + Name + Role + Quals.
+ *
+ * Phase 1b: eyebrow, headline, standDate via EditableText. people-Array bleibt (Phase 1c).
  */
+import { EditableText } from '../editor/EditableText';
 
 export type TeamBshConfig = {
   eyebrow?: string;
@@ -19,8 +22,14 @@ export default function TeamBshSection({ config }: { config: TeamBshConfig }) {
   return (
     <section className="kf-bsh-team">
       <div className="kf-bsh-team__inner">
-        {config.eyebrow && <p className="kf-bsh-team__eyebrow">{config.eyebrow}</p>}
-        <h2 className="kf-bsh-team__headline">{config.headline}</h2>
+        {config.eyebrow && (
+          <EditableText as="p" fieldKey="eyebrow" className="kf-bsh-team__eyebrow">
+            {config.eyebrow}
+          </EditableText>
+        )}
+        <EditableText as="h2" fieldKey="headline" className="kf-bsh-team__headline">
+          {config.headline}
+        </EditableText>
         <div className="kf-bsh-team__grid">
           {config.people.map((p, i) => (
             <article key={i} className="kf-bsh-person">
@@ -36,7 +45,11 @@ export default function TeamBshSection({ config }: { config: TeamBshConfig }) {
             </article>
           ))}
         </div>
-        {config.standDate && <p className="kf-bsh-team__stand">{config.standDate}</p>}
+        {config.standDate && (
+          <EditableText as="p" fieldKey="standDate" className="kf-bsh-team__stand">
+            {config.standDate}
+          </EditableText>
+        )}
       </div>
     </section>
   );
