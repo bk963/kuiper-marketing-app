@@ -3,10 +3,13 @@
  * Pos 7 in der Default-BSH-LP. N Schritte als nummerierte Cards + CTA-Pill am Ende.
  *
  * Phase 1b: eyebrow, headlinePre, headlineAccent, headlineSuffix, ctaText via EditableText.
- * steps-Array + ctaHref bleiben (Phase 1c / Settings-Sidebar).
+ * Phase 1c: steps[] (num/title/body) via EditableText path + ItemToolbar.
+ *   ctaHref bleibt Settings-Sidebar (Phase 7).
  */
 import { ArrowSvg } from './_helpers';
 import { EditableText } from '../editor/EditableText';
+import ItemToolbar, { AddItemButton } from '../editor/ItemToolbar';
+import { STEPS_STEP_DEFAULT } from '../editor/itemDefaults';
 
 export type StepsBshConfig = {
   eyebrow?: string;
@@ -41,13 +44,21 @@ export default function StepsBshSection({ config }: { config: StepsBshConfig }) 
         </h2>
         <div className="kf-bsh-steps__grid">
           {config.steps.map((s, i) => (
-            <article key={i} className="kf-bsh-step">
-              <div className="kf-bsh-step__num">{s.num}</div>
-              <h3 className="kf-bsh-step__title">{s.title}</h3>
-              <p className="kf-bsh-step__body">{s.body}</p>
+            <article key={i} className="kf-bsh-step" data-edit-item-container>
+              <ItemToolbar arrayKey="steps" index={i} total={config.steps.length} template={STEPS_STEP_DEFAULT} />
+              <EditableText as="div" fieldKey={`steps.${i}.num`} className="kf-bsh-step__num">
+                {s.num}
+              </EditableText>
+              <EditableText as="h3" fieldKey={`steps.${i}.title`} className="kf-bsh-step__title">
+                {s.title}
+              </EditableText>
+              <EditableText as="p" fieldKey={`steps.${i}.body`} className="kf-bsh-step__body">
+                {s.body}
+              </EditableText>
             </article>
           ))}
         </div>
+        <AddItemButton arrayKey="steps" template={STEPS_STEP_DEFAULT} label="+ Neuer Schritt" />
         {config.ctaText && config.ctaHref && (
           <div className="kf-bsh-steps__cta-row">
             <a href={config.ctaHref} className="kf-bsh-pill">

@@ -3,9 +3,11 @@
  * Pos 12 in der Default-BSH-LP. <details>-Accordion mit Chevron-Toggle.
  *
  * Phase 1b: eyebrow, headlinePre, headlineAccent, headlineSuffix via EditableText.
- * items-Array (q/a) bleibt (Phase 1c).
+ * Phase 1c: items[] (q/a) via EditableText path + ItemToolbar.
  */
 import { EditableText } from '../editor/EditableText';
+import ItemToolbar, { AddItemButton } from '../editor/ItemToolbar';
+import { FAQ_ITEM_DEFAULT } from '../editor/itemDefaults';
 
 export type FaqBshConfig = {
   eyebrow?: string;
@@ -38,17 +40,19 @@ export default function FaqBshSection({ config }: { config: FaqBshConfig }) {
         </h2>
         <ul className="kf-bsh-faq__list">
           {config.items.map((it, i) => (
-            <li key={i}>
+            <li key={i} data-edit-item-container>
+              <ItemToolbar arrayKey="items" index={i} total={config.items.length} template={FAQ_ITEM_DEFAULT} />
               <details>
                 <summary>
-                  {it.q}
+                  <EditableText as="span" fieldKey={`items.${i}.q`}>{it.q}</EditableText>
                   <span className="kf-bsh-faq__chev"></span>
                 </summary>
-                <p>{it.a}</p>
+                <EditableText as="p" fieldKey={`items.${i}.a`}>{it.a}</EditableText>
               </details>
             </li>
           ))}
         </ul>
+        <AddItemButton arrayKey="items" template={FAQ_ITEM_DEFAULT} label="+ Neue FAQ-Frage" />
       </div>
     </section>
   );
