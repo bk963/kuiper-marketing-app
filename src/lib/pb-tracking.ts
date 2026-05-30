@@ -91,3 +91,49 @@ export async function patchVisit(id: string, body: Record<string, any>): Promise
     return null;
   }
 }
+
+/**
+ * Generic list-Helper für Tracking-Collections (T5 — Admin-Dashboards).
+ * Nutzt skipTotal=1 + perPage Workaround für PB v0.22-Bug.
+ */
+export async function listTrackingRecords(collection: string, opts?: {
+  perPage?: number;
+  page?: number;
+  sort?: string;
+  filter?: string;
+  fields?: string;
+}): Promise<{ items: any[]; totalItems?: number; page?: number; perPage?: number; totalPages?: number } | null> {
+  const perPage = opts?.perPage ?? 100;
+  const page = opts?.page ?? 1;
+  const params = new URLSearchParams({ perPage: String(perPage), page: String(page), skipTotal: '1' });
+  if (opts?.sort) params.set('sort', opts.sort);
+  if (opts?.filter) params.set('filter', opts.filter);
+  if (opts?.fields) params.set('fields', opts.fields);
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records?${params.toString()}`, {
+      headers: await authHeaders(),
+      cache: 'no-store',
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+/** Count-Helper — perPage=1 für totalItems ohne Datenload. */
+export async function countTrackingRecords(collection: string, filter?: string): Promise<number> {
+  const params = new URLSearchParams({ perPage: '1', page: '1' });
+  if (filter) params.set('filter', filter);
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records?${params.toString()}`, {
+      headers: await authHeaders(),
+      cache: 'no-store',
+    });
+    if (!r.ok) return 0;
+    const d = await r.json();
+    return Number(d.totalItems || 0);
+  } catch {
+    return 0;
+  }
+}
