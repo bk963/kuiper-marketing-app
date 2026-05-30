@@ -8,11 +8,10 @@
  *   Note: RichText (mit <strong>-HTML) wird durch plain-EditableText ersetzt im
  *   Edit-Mode. Inline-Bold-Formatting kommt in Phase 1d / Settings-Sidebar.
  */
-import { RichText } from './_helpers';
-import { EditableText, EditableContext } from '../editor/EditableText';
+import { EditableText } from '../editor/EditableText';
 import ItemToolbar, { AddItemButton } from '../editor/ItemToolbar';
 import { PARAGRAPH_DEFAULT } from '../editor/itemDefaults';
-import { useContext } from 'react';
+import ParagraphRenderer from './_ParagraphRenderer';
 
 export type StoryBshConfig = {
   headlinePre: string;
@@ -23,19 +22,6 @@ export type StoryBshConfig = {
   photoSrc?: string;
   photoAlt?: string;
 };
-
-/** Im Edit-Mode plain-EditableText (verliert HTML), in Apex RichText mit dangerouslySetInnerHTML */
-function ParagraphRenderer({ html, index }: { html: string; index: number }) {
-  const ctx = useContext(EditableContext);
-  if (ctx?.editable) {
-    return (
-      <EditableText as="p" fieldKey={`paragraphs.${index}`}>
-        {html.replace(/<\/?[^>]+(>|$)/g, '')}
-      </EditableText>
-    );
-  }
-  return <RichText html={html} as="p" />;
-}
 
 export default function StoryBshSection({ config }: { config: StoryBshConfig }) {
   return (
@@ -58,7 +44,7 @@ export default function StoryBshSection({ config }: { config: StoryBshConfig }) 
             {config.paragraphs.map((p, i) => (
               <div key={i} data-edit-item-container>
                 <ItemToolbar arrayKey="paragraphs" index={i} total={config.paragraphs.length} template={PARAGRAPH_DEFAULT} />
-                <ParagraphRenderer html={p} index={i} />
+                <ParagraphRenderer html={p} arrayKey="paragraphs" index={i} />
               </div>
             ))}
             <AddItemButton arrayKey="paragraphs" template={PARAGRAPH_DEFAULT} label="+ Neuer Absatz" />
