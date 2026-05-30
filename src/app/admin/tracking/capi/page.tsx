@@ -38,13 +38,15 @@ export default async function Page() {
 
   const leads = (leadsRes?.items || []).filter((l: any) => l.status !== 'spam');
 
-  // Aggregate: Fire-Count + Last-Error pro Plattform
+  // Aggregate: Fire-Count + Last-Error + Token-Status pro Plattform
   const agg = PLATS.map(p => {
+    const missing = p.envCheck.filter(k => !env[k] || !String(env[k]).trim());
+    const configured = missing.length === 0;
     const sent = leads.filter((l: any) => l[`capi_${p.id}_status`] === 'sent').length;
     const skipped = leads.filter((l: any) => l[`capi_${p.id}_status`] === 'skipped').length;
     const error = leads.filter((l: any) => l[`capi_${p.id}_status`] === 'error').length;
     const lastError = leads.find((l: any) => l[`capi_${p.id}_status`] === 'error');
-    return { ...p, sent, skipped, error, lastError: lastError?.[`capi_${p.id}_error`] };
+    return { ...p, configured, missing, sent, skipped, error, lastError: lastError?.[`capi_${p.id}_error`] };
   });
 
   return (
