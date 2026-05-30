@@ -3,10 +3,13 @@
  * Pos 13 in der Default-BSH-LP. Navy-Hintergrund + Check-Liste + Big-Cyan-Pill.
  *
  * Phase 1b: eyebrow, headlinePre, headlineAccent, headlineSuffix, ctaText via EditableText.
- * bullets-Array + ctaHref bleiben (Phase 1c / Settings-Sidebar Phase 7).
+ * Phase 1c: bullets[] (string-array) via EditableText path + ItemToolbar.
+ *   ctaHref bleibt Settings-Sidebar (Phase 7).
  */
 import { ArrowSvg } from './_helpers';
 import { EditableText } from '../editor/EditableText';
+import ItemToolbar, { AddItemButton } from '../editor/ItemToolbar';
+import { BULLET_DEFAULT } from '../editor/itemDefaults';
 
 export type FinalBshConfig = {
   eyebrow?: string;
@@ -40,8 +43,14 @@ export default function FinalBshSection({ config }: { config: FinalBshConfig }) 
           )}
         </h2>
         <ul className="kf-bsh-final__list">
-          {config.bullets.map((b, i) => <li key={i}>{b}</li>)}
+          {config.bullets.map((b, i) => (
+            <li key={i} data-edit-item-container>
+              <ItemToolbar arrayKey="bullets" index={i} total={config.bullets.length} template={BULLET_DEFAULT} />
+              <EditableText as="span" fieldKey={`bullets.${i}`}>{b}</EditableText>
+            </li>
+          ))}
         </ul>
+        <AddItemButton arrayKey="bullets" template={BULLET_DEFAULT} label="+ Neuer Bullet-Point" />
         <a href={config.ctaHref} className="kf-bsh-pill kf-bsh-pill--cta kf-bsh-pill--lg">
           <EditableText as="span" fieldKey="ctaText">{config.ctaText}</EditableText>
           <ArrowSvg />

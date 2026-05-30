@@ -3,9 +3,12 @@
  * EditableText — React-managed inline-editable text component.
  *
  * Phase 1b der Inline-Editor-Migration (Bk 2026-05-30).
+ * Phase 1c (2026-05-30): `fieldKey` supportet dotted-path (z.B. "cards.0.title")
+ * für nested Array/Object-Felder. InlineEditor reduziert das per deep-patch.
  *
  * Pattern:
  *  - Section-Components rendern `<EditableText fieldKey="eyebrow" as="span" className="...">value</EditableText>`
+ *    ODER nested: `<EditableText fieldKey="cards.0.title" as="h3" className="...">value</EditableText>`
  *  - OHNE EditableContext (= Apex-LP) → rendert plain `<span className="...">value</span>` (unverändert)
  *  - MIT EditableContext.editable=true (= Inline-Editor) → rendert `<span contenteditable>` mit onBlur-Save
  *
@@ -13,18 +16,29 @@
  *  - Apex-Output identisch (Server-Rendering-fähig)
  *  - Stable durch React-Re-Renders (kein post-mount querySelector mehr)
  *  - Multiple Spans im selben h1/Container ohne Konflikt (z.B. headlinePre + headlineAccent getrennt editierbar)
+ *  - Phase 1c: Array-Items (cards/people/steps/items) via path-fieldKey
  *
- * EditableContext muss von InlineEditor.tsx mit { editable: true, onPatchField } provided sein.
+ * EditableContext muss von InlineEditor.tsx mit { editable: true, onPatchField, onArrayOp } provided sein.
  * Ohne Provider rendert die Component im Read-Only-Mode.
  */
 import { createContext, useContext, useRef } from 'react';
 import type { ElementType, ReactNode, FocusEvent, KeyboardEvent } from 'react';
 
+export type ArrayOp = 'add' | 'delete' | 'move';
+export type ArrayOpMeta = {
+  index?: number;
+  from?: number;
+  to?: number;
+  template?: any;
+};
+
 export type EditableContextValue = {
   /** Master-Switch: wenn false, EditableText rendert wie ein normaler Tag */
   editable: boolean;
-  /** Sektion-Scope: wer aktuell editiert wird. EditableText holt sich onPatchField vom Parent SectionEditFrame. */
-  onPatchField: (key: string, value: string) => void;
+  /** Top-Level oder nested-path Patch (z.B. "cards.0.title") */
+  onPatchField: (keyOrPath: string, value: any) => void;
+  /** Phase 1c: Array-Operations (Add/Delete/Move auf config.<arrayKey>) */
+  onArrayOp?: (arrayKey: string, op: ArrayOp, meta: ArrayOpMeta) => void;
 };
 
 export const EditableContext = createContext<EditableContextValue | null>(null);
@@ -32,11 +46,11 @@ export const EditableContext = createContext<EditableContextValue | null>(null);
 export type EditableTextProps = {
   /** HTML-Tag (span/h1/h2/p/div) — Default span */
   as?: ElementType;
-  /** config-Key (z.B. "eyebrow", "headlinePre") — wird mit dem Wert an onPatchField übergeben */
+  /** config-Key oder nested-path (z.B. "eyebrow" oder "cards.0.title") */
   fieldKey: string;
   /** Optional CSS-Klassen */
   className?: string;
-  /** Aktueller Wert (= config[fieldKey]). MUSS = children, sonst Edit/Read drift */
+  /** Aktueller Wert (= config[fieldKey] / config.path). MUSS = children, sonst Edit/Read drift */
   children: ReactNode;
   /** Im Edit-Mode angezeigter Hinweis wenn leer */
   placeholder?: string;

@@ -2,10 +2,15 @@
  * BSH-Hybrid-Section — kf-bsh-hybrid
  * Pos 9 in der Default-BSH-LP. Volltext-Block (paragraphs) + Note.
  *
- * Phase 1b: flat fields via EditableText. paragraphs-Array bleibt (Phase 1c).
+ * Phase 1b: flat fields via EditableText.
+ * Phase 1c: paragraphs[] (string-array) via EditableText path + ItemToolbar.
+ *   Inline-HTML (<strong>) wird im Edit-Mode strip-displayed (Phase 1d für rich-text).
  */
 import { RichText } from './_helpers';
-import { EditableText } from '../editor/EditableText';
+import { EditableText, EditableContext } from '../editor/EditableText';
+import ItemToolbar, { AddItemButton } from '../editor/ItemToolbar';
+import { PARAGRAPH_DEFAULT } from '../editor/itemDefaults';
+import { useContext } from 'react';
 
 export type HybridBshConfig = {
   eyebrow?: string;
@@ -17,6 +22,18 @@ export type HybridBshConfig = {
   /** Einzelner Hinweis-Satz am Ende, fett+cyan */
   note?: string;
 };
+
+function ParagraphRenderer({ html, index }: { html: string; index: number }) {
+  const ctx = useContext(EditableContext);
+  if (ctx?.editable) {
+    return (
+      <EditableText as="p" fieldKey={`paragraphs.${index}`}>
+        {html.replace(/<\/?[^>]+(>|$)/g, '')}
+      </EditableText>
+    );
+  }
+  return <RichText html={html} as="p" />;
+}
 
 export default function HybridBshSection({ config }: { config: HybridBshConfig }) {
   return (
@@ -40,7 +57,13 @@ export default function HybridBshSection({ config }: { config: HybridBshConfig }
           )}
         </h2>
         <div className="kf-bsh-hybrid__body">
-          {config.paragraphs.map((p, i) => <RichText key={i} html={p} as="p" />)}
+          {config.paragraphs.map((p, i) => (
+            <div key={i} data-edit-item-container>
+              <ItemToolbar arrayKey="paragraphs" index={i} total={config.paragraphs.length} template={PARAGRAPH_DEFAULT} />
+              <ParagraphRenderer html={p} index={i} />
+            </div>
+          ))}
+          <AddItemButton arrayKey="paragraphs" template={PARAGRAPH_DEFAULT} label="+ Neuer Absatz" />
           {config.note && (
             <EditableText as="p" fieldKey="note" className="kf-bsh-hybrid__note">
               {config.note}
