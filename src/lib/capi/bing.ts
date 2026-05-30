@@ -81,14 +81,19 @@ export async function fireBing(lead: LeadForCapi): Promise<CapiResult> {
   </s:Header>
   <s:Body>
     <ApplyOfflineConversionsRequest xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
-      <OfflineConversions xmlns:b="https://bingads.microsoft.com/CampaignManagement/v13">
-        <b:OfflineConversion>
-          <b:ConversionCurrencyCode>EUR</b:ConversionCurrencyCode>
-          <b:ConversionName>${escapeXml(goalName)}</b:ConversionName>
-          <b:ConversionTime>${escapeXml(formattedTime)}</b:ConversionTime>
-          <b:ConversionValue>${value}</b:ConversionValue>
-          <b:MicrosoftClickId>${escapeXml(lead.msclkid)}</b:MicrosoftClickId>
-        </b:OfflineConversion>
+      <OfflineConversions i:nil="false">
+        <OfflineConversion>
+          <AdjustmentValue i:nil="false">${value}</AdjustmentValue>
+          <ConversionCurrencyCode i:nil="false">EUR</ConversionCurrencyCode>
+          <ConversionName i:nil="false">${escapeXml(goalName)}</ConversionName>
+          <ConversionTime>${escapeXml(formattedTime)}</ConversionTime>
+          <ConversionValue i:nil="false">${value}</ConversionValue>
+          <ExternalAttributionCredit i:nil="true"/>
+          <ExternalAttributionModel i:nil="true"/>
+          <HashedEmailAddress i:nil="true"/>
+          <HashedPhoneNumber i:nil="true"/>
+          <MicrosoftClickId i:nil="false">${escapeXml(lead.msclkid)}</MicrosoftClickId>
+        </OfflineConversion>
       </OfflineConversions>
     </ApplyOfflineConversionsRequest>
   </s:Body>
