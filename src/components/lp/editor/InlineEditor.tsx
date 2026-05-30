@@ -7,37 +7,38 @@
  *  - Jede Section wird in <SectionEditFrame> wrapped → Hover-Outline + Toolbar
  *  - Phase 1b: EditableContext.Provider gibt onPatchField an Sections; Sections
  *    rendern <EditableText fieldKey="..."> die im Edit-Mode contenteditable werden.
+ *  - Phase 2 (heute): Auto-Save mit 300ms-Debounce + AbortController
+ *  - Phase 3 (heute): Section-Hover-Toolbar (Up/Down/Duplicate/Delete) mit Confirm-Modal
  *  - State-Verwaltung lokal (currentSections), Save schickt komplettes content_json
  *
- * Phase 1 (DOM-Hack) — DEPRECATED:
- *  - post-mount querySelector → contenteditable
- *  - Brach bei React-Re-Render, fehlte für Hero-Headline-Accent
- *
- * Phase 1b (heute 2026-05-30):
- *  - Section-Components rendern <EditableText> als first-class component
- *  - Stable durch React-Lifecycle
- *  - Array-Fields (cards, people, items) bleiben unverändert → Phase 1c
- *
  * Folge-Phasen:
- *  - 2 Auto-Save-Debounce
- *  - 3 Section-Toolbar (Up/Down/Dup/Delete) on hover
- *  - 4 Add-Section-Insert-Button zwischen Sections
- *  - 5 Drag-Reorder
- *  - 6 Inline-Image-Upload
- *  - 7 Settings-Sidebar für non-inline Configs
+ *  - 4 Add-Section-Insert-Button zwischen Sections (Picker für 22 Bausteine)
+ *  - 5 Drag-Reorder (@dnd-kit)
+ *  - 6 Inline-Image-Upload (Hetzner-S3)
+ *  - 7 Settings-Sidebar für non-inline Configs (Icons, Links, IDs)
+ *  - 8 Undo/Redo + content_json_draft + Publish-Workflow
  */
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { BshSection, BshSectionType } from '../sections/types';
 import { SECTION_COMPONENTS } from '../sections/registry';
 import LpFrame from '../LpFrame';
 import { EditableContext } from './EditableText';
+import DeleteSectionModal from './DeleteSectionModal';
 
 const STATUS_COLOR: Record<string, string> = {
   live: 'bg-emerald-100 text-emerald-800',
   draft: 'bg-amber-100 text-amber-800',
   archived: 'bg-slate-100 text-slate-600',
 };
+
+/** UUID-15 wie PB autogenerate-pattern */
+function uuid15(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  for (let i = 0; i < 15; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
 
 export default function InlineEditor({ lp: initialLp }: { lp: any }) {
   const [lp] = useState(initialLp);
@@ -52,11 +53,18 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<BshSection | null>(null);
 
-  // dirty-Detection
+  // Auto-Save Refs
+  const abortRef = useRef<AbortController | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // last-saved-snapshot um zu erkennen wann state == server-state
+  const savedSnapshotRef = useRef<string>(JSON.stringify(initialSections));
+
+  // dirty-Detection — vergleicht aktuellen sections-state mit last-saved-snapshot
   useEffect(() => {
-    setDirty(JSON.stringify(sections) !== JSON.stringify(initialSections));
-  }, [sections, initialSections]);
+    setDirty(JSON.stringify(sections) !== savedSnapshotRef.current);
+  }, [sections]);
 
   /** Section-Config-Patch: single field-update */
   const patchSectionConfig = useCallback((sectionId: string, key: string, value: any) => {
@@ -66,30 +74,92 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
     }));
   }, []);
 
-  async function handleSave() {
+  /** Section-Reorder, -Duplicate, -Delete (Phase 3 Toolbar) */
+  const moveSection = useCallback((sectionId: string, direction: 'up' | 'down') => {
+    setSections(prev => {
+      const idx = prev.findIndex(s => s.id === sectionId);
+      if (idx < 0) return prev;
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  }, []);
+
+  const duplicateSection = useCallback((sectionId: string) => {
+    setSections(prev => {
+      const idx = prev.findIndex(s => s.id === sectionId);
+      if (idx < 0) return prev;
+      const clone: BshSection = JSON.parse(JSON.stringify(prev[idx]));
+      clone.id = uuid15();
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+  }, []);
+
+  const deleteSection = useCallback((sectionId: string) => {
+    setSections(prev => prev.filter(s => s.id !== sectionId));
+    setDeleteCandidate(null);
+  }, []);
+
+  /** Save (Phase 2) — async PATCH mit AbortController; called by autosave-debounce */
+  const handleSave = useCallback(async (currentSections: BshSection[]) => {
+    // Abort in-flight save
+    abortRef.current?.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     setSaving(true);
     setSaveError(null);
+    const snapshot = JSON.stringify(currentSections);
+
     try {
       const res = await fetch(`/api/admin/lp/${lp.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content_json: { ...initialContent, sections },
+          content_json: { ...initialContent, sections: currentSections },
         }),
+        signal: abort.signal,
       });
+      if (abort.signal.aborted) return;
       if (!res.ok) {
         const txt = await res.text();
         setSaveError(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
         return;
       }
-      setDirty(false);
+      // Erfolg: snapshot-tracking damit dirty-flag korrekt fällt
+      savedSnapshotRef.current = snapshot;
       setLastSavedAt(new Date());
+      // dirty-update über setSections-Trigger; hier nochmal sync
+      setDirty(JSON.stringify(currentSections) !== snapshot ? true : false);
     } catch (e: any) {
+      if (e?.name === 'AbortError') return; // expected
       setSaveError(e?.message || 'Save failed');
     } finally {
-      setSaving(false);
+      if (!abort.signal.aborted) setSaving(false);
     }
-  }
+  }, [initialContent, lp.id]);
+
+  /** Auto-Save-Debounce (Phase 2) — 300ms nach letzter Änderung */
+  useEffect(() => {
+    if (!dirty) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      handleSave(sections);
+    }, 300);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [sections, dirty, handleSave]);
+
+  /** Manueller Save-Button — sofortiges Flush ohne debounce */
+  const handleManualSave = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    handleSave(sections);
+  }, [sections, handleSave]);
 
   return (
     <div className="inline-editor-root">
@@ -101,12 +171,14 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${STATUS_COLOR[lp.status] || 'bg-slate-100 text-slate-600'}`}>
             {lp.status || 'draft'}
           </span>
-          {dirty && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-100 text-amber-800">Ungespeichert</span>}
-          <span className="text-[11px] text-slate-500">{sections.length} Sections · Inline-Edit-Mode (Phase 1b)</span>
+          {saving && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-blue-100 text-blue-800 animate-pulse">Speichert …</span>}
+          {!saving && dirty && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-100 text-amber-800">Ungespeichert</span>}
+          {!saving && !dirty && lastSavedAt && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-100 text-emerald-800">✓ Gespeichert</span>}
+          <span className="text-[11px] text-slate-500">{sections.length} Sections · Auto-Save (300ms)</span>
         </div>
         <div className="flex items-center gap-2">
-          {lastSavedAt && !dirty && (
-            <span className="text-xs text-slate-500">Gespeichert {lastSavedAt.toLocaleTimeString('de-DE')}</span>
+          {lastSavedAt && !dirty && !saving && (
+            <span className="text-xs text-slate-500">{lastSavedAt.toLocaleTimeString('de-DE')}</span>
           )}
           {saveError && <span className="text-xs text-red-600 font-mono max-w-md truncate">{saveError}</span>}
           {lp.status === 'live' && lp.slug && (
@@ -116,9 +188,10 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
           )}
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleManualSave}
             disabled={!dirty || saving}
             className="px-4 py-1.5 bg-brand text-navy rounded-lg font-bold hover:bg-brand-light transition text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Sofort speichern (Strg+S)"
           >
             {saving ? 'Speichert …' : 'Speichern'}
           </button>
@@ -127,7 +200,7 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
 
       {/* Edit-Hint-Banner */}
       <div className="px-5 py-2 bg-brand/5 border-b border-brand/20 text-xs text-slate-700">
-        💡 Klick auf Text um zu editieren · Enter speichert · Esc bricht ab · Section-Toolbar (Phase 3)
+        💡 Klick auf Text um zu editieren · Enter speichert · Esc bricht ab · Auto-Save nach 300ms · Section-Hover für Toolbar
       </div>
 
       {/* Live-Rendered LP mit Edit-Wrappern */}
@@ -140,10 +213,21 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
               index={i}
               total={sections.length}
               onPatchConfig={(k, v) => patchSectionConfig(s.id, k, v)}
+              onMoveUp={() => moveSection(s.id, 'up')}
+              onMoveDown={() => moveSection(s.id, 'down')}
+              onDuplicate={() => duplicateSection(s.id)}
+              onDelete={() => setDeleteCandidate(s)}
             />
           ))}
         </LpFrame>
       </div>
+
+      {/* Delete-Confirm-Modal */}
+      <DeleteSectionModal
+        section={deleteCandidate}
+        onCancel={() => setDeleteCandidate(null)}
+        onConfirm={() => deleteCandidate && deleteSection(deleteCandidate.id)}
+      />
 
       <style jsx global>{`
         .inline-editor-canvas section[data-edit-section] {
@@ -188,11 +272,58 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
           outline: 2px solid rgb(48, 196, 237);
           background: rgba(48, 196, 237, 0.1);
         }
-        /* Placeholder für leere editable-Felder */
         .inline-editor-canvas [data-inline-edit]:empty::before {
           content: attr(data-placeholder);
           color: rgba(0, 0, 0, 0.3);
           font-style: italic;
+        }
+        /* Section-Toolbar (Phase 3) */
+        .inline-editor-section-toolbar {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 30;
+          display: flex;
+          gap: 4px;
+          background: rgb(11, 26, 77);
+          color: white;
+          padding: 4px 6px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s;
+        }
+        .inline-editor-canvas > * > div[data-edit-section]:hover .inline-editor-section-toolbar,
+        .inline-editor-canvas div[data-edit-section]:hover .inline-editor-section-toolbar {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .inline-editor-section-toolbar button {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: background 0.1s;
+        }
+        .inline-editor-section-toolbar button:hover:not(:disabled) {
+          background: rgb(48, 196, 237);
+          color: rgb(11, 26, 77);
+        }
+        .inline-editor-section-toolbar button:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+        .inline-editor-section-toolbar button.delete:hover {
+          background: rgb(220, 38, 38);
+          color: white;
         }
       `}</style>
     </div>
@@ -203,21 +334,27 @@ export default function InlineEditor({ lp: initialLp }: { lp: any }) {
  * SectionEditFrame — wrapped um eine Section, fügt Edit-Mode-Attrs hinzu
  * + provided EditableContext mit onPatchField an die Section-Component.
  *
- * Section-Components rendern EditableText-Tags die durch den Context
- * automatisch in den Edit-Mode wechseln (contenteditable + onBlur-Save).
+ * Phase 3: Toolbar mit Up/Down/Duplicate/Delete-Buttons schwebend rechts oben.
  */
 function SectionEditFrame({
   section,
   index,
   total,
   onPatchConfig,
+  onMoveUp,
+  onMoveDown,
+  onDuplicate,
+  onDelete,
 }: {
   section: BshSection;
   index: number;
   total: number;
   onPatchConfig: (key: string, value: any) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
-  void index; void total;
   const Comp = SECTION_COMPONENTS[section.type as BshSectionType];
   if (!Comp) {
     return (
@@ -227,11 +364,16 @@ function SectionEditFrame({
     );
   }
 
-  // EditableContext liefert onPatchField an die <EditableText>-Childs in der Section.
-  // Jeder SectionEditFrame hat seinen eigenen onPatchConfig (Closure über section.id),
-  // also bekommt jede Section ihren eigenen Context-Scope.
   return (
-    <div data-edit-section data-section-type={section.type} data-section-id={section.id}>
+    <div data-edit-section data-section-type={section.type} data-section-id={section.id} className="relative">
+      {/* Section-Toolbar (Phase 3) — schwebt rechts oben, sichtbar on hover */}
+      <div className="inline-editor-section-toolbar" data-section-toolbar={section.id}>
+        <button type="button" onClick={onMoveUp} disabled={index === 0} title="Nach oben" aria-label="Section nach oben verschieben">↑</button>
+        <button type="button" onClick={onMoveDown} disabled={index === total - 1} title="Nach unten" aria-label="Section nach unten verschieben">↓</button>
+        <button type="button" onClick={onDuplicate} title="Duplizieren" aria-label="Section duplizieren">⎘</button>
+        <button type="button" onClick={onDelete} className="delete" title="Löschen" aria-label="Section löschen">🗑️</button>
+      </div>
+
       <EditableContext.Provider value={{ editable: true, onPatchField: onPatchConfig }}>
         <Comp config={section.config} lpId={section.id} />
       </EditableContext.Provider>
