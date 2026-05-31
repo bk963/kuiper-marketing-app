@@ -15,14 +15,21 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = (await headers()).get('x-pathname') || '';
-  const isLogin = pathname === '/admin/login';
+  const hdrs = await headers();
+  const pathname = hdrs.get('x-pathname') || '';
+  // Tracking NUR auf öffentlichen Public-LPs unter kuiper-safety.de/lp/*.
+  // Edge-Caddy (kuiper-web-prod) setzt X-Lp-Proxy-From für den /lp/*-Reverse-Proxy.
+  // Direkt-Zugriffe auf marketing.kuiper-safety.de (Admin + interne /lp/*) haben den Header nicht
+  // → kein GA4 / kein Clarity / keine Pixel / kein Self-Tracking.
+  // Bk-Direktive 2026-05-31: marketing.kuiper-safety.de geht nicht live, daher kein Tracking dort.
+  const proxiedFromEdge = hdrs.get('x-lp-proxy-from') === 'kuiper-web-prod';
+  const isPublicLP = proxiedFromEdge && pathname.startsWith('/lp/');
 
   return (
     <html lang="de" className={`${figtree.variable} ${dmSans.variable}`}>
       <body className="font-sans bg-slate-50 text-ink antialiased min-h-screen">
-        {/* Tracking-Stack (1:1 wie blog./www) — auch im Marketing-Cockpit für Self-Tracking */}
-        {!isLogin && (
+        {/* Tracking-Stack (1:1 wie blog./www) — NUR für public LPs unter kuiper-safety.de */}
+        {isPublicLP && (
           <>
             <Script src="/scripts/kuiper-consent.v1.js" strategy="beforeInteractive" />
             <Script src="/scripts/kuiper-ga4.v1.js" strategy="afterInteractive" />
