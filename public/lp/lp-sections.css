@@ -178,6 +178,19 @@
 .kf-bsh-story--overlap .kf-bsh-story__inner { overflow: visible; }
 .kf-bsh-story--overlap .kf-bsh-story__photo { overflow: visible; height: auto; z-index: 5; }
 .kf-bsh-story--overlap .kf-bsh-story__photo img { width: calc(900 * var(--kf-u)); left: calc(-80 * var(--kf-u)); bottom: calc(-60 * var(--kf-u)); z-index: 6; filter: drop-shadow(0 calc(20 * var(--kf-u)) calc(40 * var(--kf-u)) rgba(0,0,0,0.25)); }
+/* V2-Overlap-Tune: Hand-Position genauer — Foto ragt 80-120px nach unten + leicht nach rechts */
+.kf-bsh-story--overlap .kf-bsh-story__photo { left: calc(1020 * var(--kf-u)); }
+.kf-bsh-story--overlap .kf-bsh-story__photo img { width: calc(960 * var(--kf-u)); bottom: calc(-100 * var(--kf-u)); left: calc(-100 * var(--kf-u)); }
+
+/* V2-Full-Color-Variante für Verbands-Logos: opacity:1 statt 0.75 (V1-Default)
+ * + minimaler Hover-Lift für Interaktions-Feedback */
+.kf-bsh-member--full-color .kf-bsh-member__row img { opacity: 1; transition: transform 0.2s; }
+.kf-bsh-member--full-color .kf-bsh-member__row img:hover { transform: translateY(-2px) scale(1.05); }
+
+/* V2-Bigger-Seal: Award-Badge prominent vergrößert + Lift-Hover */
+.kf-bsh-pe__seal img { max-width: 360px; width: 100%; height: auto; }
+.kf-bsh-pe__seal { margin: 12px 0 18px; }
+
 
 
 /* === Member === */

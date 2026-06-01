@@ -13,11 +13,16 @@ import { MEMBER_LOGO_DEFAULT } from '../editor/itemDefaults';
 export type MemberBshConfig = {
   label?: string;
   logos: { src: string; alt: string }[];
+  /** V2: Logos voll farbig statt 75% Transparenz (Default in V1) */
+  fullColor?: boolean;
 };
 
 export default function MemberBshSection({ config }: { config: MemberBshConfig }) {
+  const sectionClass = config.fullColor
+    ? 'kf-bsh-member kf-bsh-member--full-color'
+    : 'kf-bsh-member';
   return (
-    <section className="kf-bsh-member">
+    <section className={sectionClass}>
       <div className="kf-bsh-member__inner">
         {config.label && (
           <EditableText as="p" fieldKey="label" className="kf-bsh-member__label">
