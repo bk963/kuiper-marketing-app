@@ -107,7 +107,7 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
   },
   // Section-Numbers ('02 — Vertrauen', '04 — ...', ...) RAUS — V2 zeigt keine Section-Nummern
   'bsh-usps': { eyebrow: '' },
-  'bsh-story': { photoOverlap: true },
+  // bsh-story: 1:1 V1-Astro — KEIN Overlap, Foto schließt mit Section ab, Hand zeigt nach oben (Bk-Freigabe 2026-06-01 via Festung-Clip-Screenshot)
   'bsh-member': { fullColor: true },
   'bsh-testi': { eyebrow: '' },
   'bsh-steps': { eyebrow: '' },
