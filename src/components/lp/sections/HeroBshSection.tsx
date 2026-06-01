@@ -15,6 +15,7 @@
 import BshForm from '../BshForm';
 import { Video } from './_helpers';
 import { EditableText } from '../editor/EditableText';
+import CustomPlayVideo from './_CustomPlayVideo';
 
 export type HeroBshConfig = {
   eyebrow?: string;
@@ -24,6 +25,8 @@ export type HeroBshConfig = {
   videoSrc?: string;
   videoPoster?: string;
   videoCaption?: string;
+  /** V2: Custom-Play-Button-Overlay statt native Controls (Clickfunnels-Style) */
+  customPlayButton?: boolean;
   /** Form-Konfiguration */
   formTitle?: string;
   formId?: string;
@@ -62,7 +65,16 @@ export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig
       <div className="kf-bsh-hero__frame">
         {config.videoSrc && (
           <div className="kf-bsh-hero__video">
-            <Video videoId="hero-bsh" src={config.videoSrc} poster={config.videoPoster} />
+            {config.customPlayButton ? (
+              <CustomPlayVideo
+                videoId="hero-bsh"
+                src={config.videoSrc}
+                poster={config.videoPoster}
+                caption={config.videoCaption}
+              />
+            ) : (
+              <Video videoId="hero-bsh" src={config.videoSrc} poster={config.videoPoster} />
+            )}
             {config.videoCaption && (
               <EditableText as="p" fieldKey="videoCaption" className="kf-bsh-hero__video-caption">
                 {config.videoCaption}

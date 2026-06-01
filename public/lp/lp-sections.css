@@ -325,3 +325,47 @@
   .kf-bsh-story__text { position: static !important; padding: 0 !important; }
   .kf-bsh-story__body, .kf-bsh-story__body p { width: 100% !important; }
 }
+
+/* V2-Hero-Video: Custom-Play-Button-Overlay (Clickfunnels-Style)
+ * Aktiviert via config.customPlayButton=true → <CustomPlayVideo>.
+ * Native controls erst nach Click, davor pulsierender CTA-Button auf Poster. */
+.kf-vid--custom-play { position: relative; cursor: pointer; }
+.kf-vid--custom-play video { display: block; }
+.kf-vid__play-btn {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  z-index: 3; outline: 0;
+}
+.kf-vid__play-btn:focus-visible { outline: 3px solid rgb(48,196,237); outline-offset: 4px; }
+.kf-vid__play-circle {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  background: rgba(48,196,237,0.95);
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(11,26,77,0.45), 0 2px 6px rgba(11,26,77,0.25);
+  transition: transform 0.18s ease, background 0.18s ease;
+  z-index: 2;
+}
+.kf-vid__play-circle svg { width: 60px; height: 60px; margin-left: 4px; }
+.kf-vid__play-btn:hover .kf-vid__play-circle { transform: scale(1.08); background: rgb(48,196,237); }
+.kf-vid__play-btn:active .kf-vid__play-circle { transform: scale(0.97); }
+.kf-vid__play-pulse {
+  position: absolute;
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  background: rgba(48,196,237,0.55);
+  z-index: 1;
+  animation: kfPlayPulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes kfPlayPulse {
+  0%   { transform: scale(1);   opacity: 0.65; }
+  70%  { transform: scale(1.65); opacity: 0;    }
+  100% { transform: scale(1.65); opacity: 0;    }
+}
+@media (max-width: 700px) {
+  .kf-vid__play-circle, .kf-vid__play-pulse { width: 72px; height: 72px; }
+  .kf-vid__play-circle svg { width: 44px; height: 44px; }
+}

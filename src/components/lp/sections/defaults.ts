@@ -94,6 +94,8 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
     formTitle: 'Jetzt direkt Infos und Preise anfordern',
     leadSource: 'bsh-lp-v2',
     formId: 'bsh-hero-v2',
+    // V2: Custom Play-Button-Overlay statt native Controls (Clickfunnels-Style)
+    customPlayButton: true,
   },
   'bsh-usps': {
     eyebrow: '02 — Warum Kuiper',
