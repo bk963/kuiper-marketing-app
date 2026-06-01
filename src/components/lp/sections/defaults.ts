@@ -111,7 +111,10 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
     // Overlap-Mode: Portrait-Hand ragt über Section-Grenze (V2-only)
     photoOverlap: true,
   },
-  // bsh-member bleibt — Verbands-Logos sind statisches Trust-Signal
+  'bsh-member': {
+    // Logos voll farbig statt 75% Transparenz (V1-Default) — Bk-Direktive 2026-06-01
+    fullColor: true,
+  },
   // bsh-testi bleibt — Video-Testimonials sind starkes Signal
   'bsh-pe': {
     label: 'Ausgezeichnete Kundenbewertungen',
