@@ -98,7 +98,7 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
     eyebrow: '★ Brandschutzhelfer-Ausbildung Bundesweit · Inhouse',
     headlinePre: 'Brandschutzhelfer-Ausbildung von',
     headlineAccent: 'echten Feuerwehrmännern',
-    subline: 'Wir kommen mit allem Equipment direkt zu Ihnen ins Unternehmen — bundesweit. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2. Ab 8 Teilnehmer.',
+    subline: 'Wir kommen mit allem Equipment direkt zu Ihnen ins Unternehmen — bundesweit. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
     formTitle: 'Jetzt direkt Infos und Preise anfordern',
     // V2-Add-Ons:
     leadSource: 'bsh-lp-v2',
