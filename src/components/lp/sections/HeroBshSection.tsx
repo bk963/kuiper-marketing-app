@@ -29,6 +29,7 @@ export type HeroBshConfig = {
   customPlayButton?: boolean;
   /** Form-Konfiguration */
   formTitle?: string;
+  formSubtitle?: string;
   formId?: string;
   leadSource?: string;
   formEndpoint?: string;
@@ -88,6 +89,8 @@ export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig
             leadSource={config.leadSource || 'bsh-lp'}
             endpoint={config.formEndpoint || '/api/lp/lead'}
             lpId={lpId}
+            formTitle={config.formTitle}
+            formSubtitle={config.formSubtitle}
           />
         </div>
       </div>

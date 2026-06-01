@@ -104,83 +104,70 @@ export default function LpFrame({ children, config = {} }: { children: ReactNode
       {/* Sections-Slot */}
       {children}
 
-      {/* Footer-3-Teiler */}
+      {/* Footer 1:1 V1-Astro — Cyan-Trennlinie + kf-s12-Footer (kein Extra-Copyright-Block, V1 hat keinen) */}
       <div style={{ height: 16, background: 'rgb(45,189,206)' }} aria-hidden="true" />
       <FooterMain />
-      <FooterCopyright />
     </>
   );
 }
 
+/**
+ * FooterMain — 1:1 V1-Astro "kf-s12" Footer (Bk-Direktive 2026-06-01).
+ * Markup-Struktur und Styles aus brandschutzhelfer-ausbildung.astro übernommen.
+ * Styles liegen in public/lp/lp-sections.css unter ".kf-s12".
+ */
 function FooterMain() {
   return (
-    <footer
-      style={{
-        background: 'linear-gradient(45deg, rgb(11,26,77), rgb(18,90,110))',
-        color: '#fff',
-        padding: 'calc(60 * var(--kf-u)) calc(160 * var(--kf-u))',
-        fontFamily: '"Figtree", system-ui, sans-serif',
-      }}
-    >
-      <div style={{ maxWidth: 1425, margin: '0 auto', display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', gap: 'calc(48 * var(--kf-u))' }}>
-        <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/kuiper-logo-lp.png" alt="Kuiper Safety Systems" style={{ height: 56, width: 'auto', marginBottom: 16 }} />
-          <p style={{ fontSize: 'calc(14 * var(--kf-u))', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            Brandschutz-Komplettlösungen für Unternehmen in ganz Deutschland.
-          </p>
-        </div>
-
-        <div>
-          <h4 style={{ fontSize: 'calc(13 * var(--kf-u))', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgb(48,196,237)', margin: '0 0 calc(16 * var(--kf-u))', fontWeight: 700 }}>Kontakt</h4>
-          <p style={{ fontSize: 'calc(14 * var(--kf-u))', lineHeight: 1.7, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            Kuiper Brandschutz GmbH<br />
-            Friedrichsfelder Str. 34<br />
-            46562 Voerde (Niederrhein)<br /><br />
-            <a href="tel:+4928555910900" style={{ color: '#fff', textDecoration: 'none' }}>+49 2855 5910900</a><br />
-            <a href="mailto:info@kuiper-safety.de" style={{ color: '#fff', textDecoration: 'none' }}>info@kuiper-safety.de</a>
-          </p>
-        </div>
-
-        <div>
-          <h4 style={{ fontSize: 'calc(13 * var(--kf-u))', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgb(48,196,237)', margin: '0 0 calc(16 * var(--kf-u))', fontWeight: 700 }}>Hinweis</h4>
-          <p style={{ fontSize: 'calc(14 * var(--kf-u))', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            Alle Angaben ohne Gewähr. Änderungen vorbehalten.
-          </p>
-        </div>
-
-        <div style={{ textAlign: 'right' }}>
-          <a href="#anfrage" style={{ color: 'rgb(48,196,237)', fontWeight: 700, fontSize: 'calc(14 * var(--kf-u))', textDecoration: 'none' }}>
-            ↑ Nach oben
+    <footer className="kf-s12" role="contentinfo" aria-label="Footer">
+      <div className="kf-s12__inner">
+        <div className="kf-s12__row">
+          <a href="/" className="kf-s12__logo" aria-label="Kuiper Safety Systems – Startseite">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/kss-logo.svg" alt="Kuiper Safety Systems" width={321} height={75} />
           </a>
+          <div className="kf-s12__cols">
+            <address className="kf-s12__col">
+              <strong>Kuiper Safety Systems</strong>
+              <span className="kf-s12__addr-line">&nbsp;</span>
+              <span>Friedrichsfelder Str. 34</span>
+              <span>46562 Voerde (Niederrhein)</span>
+              <span>Mo. – Fr. 09 – 17 Uhr</span>
+              <a href="tel:+4928555910900">+49 2855 5910900</a>
+            </address>
+            <div className="kf-s12__col">
+              <strong>Hinweis</strong>
+              <span className="kf-s12__addr-line">&nbsp;</span>
+              <p className="kf-s12__hinweis">
+                Die Angebote &amp; Inhalte dieser Seite richten sich ausdrücklich nur an Gewerbetreibende &amp; Unternehmer im Sinne des §14 BGB.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="kf-s12__totop"
+              aria-label="Nach oben scrollen"
+              onClick={() => { if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div
-        style={{
-          maxWidth: 1425,
-          margin: 'calc(40 * var(--kf-u)) auto 0',
-          paddingTop: 'calc(24 * var(--kf-u))',
-          borderTop: '1px solid rgba(255,255,255,0.15)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
-        <div style={{ display: 'flex', gap: 'calc(24 * var(--kf-u))', fontSize: 'calc(13 * var(--kf-u))', color: 'rgba(255,255,255,0.7)' }}>
-          <a href="https://kuiper-safety.de/impressum/" style={{ color: 'inherit', textDecoration: 'none' }}>Impressum</a>
-          <a href="https://kuiper-safety.de/datenschutz/" style={{ color: 'inherit', textDecoration: 'none' }}>Datenschutz</a>
-          <a href="https://kuiper-safety.de/agb/" style={{ color: 'inherit', textDecoration: 'none' }}>AGB</a>
-        </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <a href="https://www.youtube.com/@kuiper-safety" target="_blank" rel="noopener noreferrer" aria-label="YouTube" style={{ color: 'rgba(255,255,255,0.8)' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
-          </a>
-          <a href="https://www.linkedin.com/company/kuiper-brandschutz" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ color: 'rgba(255,255,255,0.8)' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
-          </a>
+        <div className="kf-s12__bottom">
+          <nav className="kf-s12__legal" aria-label="Footer-Navigation">
+            <a href="https://kuiper-safety.de/impressum/">Impressum</a>
+            <span aria-hidden="true">|</span>
+            <a href="https://kuiper-safety.de/datenschutz/">Datenschutz</a>
+          </nav>
+          <div className="kf-s12__social">
+            <a href="https://www.youtube.com/@kuiper-safety" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="kf-s12__social-link">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
+            </a>
+            <a href="https://www.linkedin.com/company/kuiper-brandschutz" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="kf-s12__social-link">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+            </a>
+          </div>
         </div>
       </div>
     </footer>

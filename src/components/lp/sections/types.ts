@@ -73,13 +73,14 @@ export const BSH_DEFAULT_CONFIGS: Record<BshSectionType, any> = {
   },
   'bsh-usps': {
     eyebrow: '02 — Vertrauen',
-    headline: 'Warum Kuiper Brandschutz.',
+    headline: 'Warum Kuiper Safety',
     cards: [
       { icon: 'fas fa-file-signature', title: 'Zertifikat nach', body: 'DGUV Information 205-023 und ASR 2.2' },
       { icon: 'fas fa-user-graduate', title: 'Praxisnah', body: 'Von echten Feuerwehrmännern lernen' },
       { icon: 'far fa-clock', title: 'Garantierte Termine', body: 'Unsere Termine finden statt.' },
       { icon: 'fas fa-laptop', title: 'E-Learning', body: 'Unsere theoretische Ausbildung ist als Hybrid Variante möglich.' },
       { icon: 'fas fa-phone-alt', title: '24/7 erreichbar', body: 'Wir sind tagtäglich für Sie erreichbar und antworten auf Ihre Fragen' },
+      { icon: 'fas fa-medal', title: '20+ Jahre Erfahrung', body: 'Geballte Praxis aus Brandschutz und Arbeitssicherheit.' },
     ],
   },
   'bsh-story': {

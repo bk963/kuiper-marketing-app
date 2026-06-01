@@ -93,30 +93,31 @@ export const BSH_V2_ORDER: BshSectionType[] = [
  */
 export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
   'bsh-hero': {
-    // Sektions-Optimierung 1 (2026-06-01): aus früherer V2-Content-Version (dcf8179) restauriert.
-    // Keyword "Brandschutzhelfer-Ausbildung" direkt in H1 (SEO + Klarheit) statt nur "Brandschutz".
+    // Hero-Optimierung 2026-06-01: V1-Astro-Headline + neue Subline + neuer Form-Title/Sub
     eyebrow: '★ Brandschutzhelfer-Ausbildung Bundesweit · Inhouse',
     headlinePre: 'Brandschutzhelfer-Ausbildung von',
     headlineAccent: 'echten Feuerwehrmännern',
-    subline: 'Wir kommen mit allem Equipment direkt zu Ihnen ins Unternehmen — bundesweit. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
-    formTitle: 'Jetzt direkt Infos und Preise anfordern',
+    subline: 'Echtes Feuer, echte Löschübung, echte Feuerwehrprofis. Direkt bei Ihnen vor Ort, bundesweit und schon ab 8 Teilnehmern, Zertifikat nach DGUV 205-023 und ASR A2.2.',
+    formTitle: 'Jetzt Infos, Preise und Wunschtermin anfragen',
+    formSubtitle: 'Wir melden uns kurzfristig mit allen Details und einem passenden Termin für Ihr Team.',
     // V2-Add-Ons:
     leadSource: 'bsh-lp-v2',
     formId: 'bsh-hero-v2',
     customPlayButton: true,
   },
-  'bsh-story': {
-    photoOverlap: true,
-  },
-  'bsh-member': {
-    fullColor: true,
-  },
-  'bsh-pe': {
-    // V1-Astro-Widget-Source bleibt (in BSH_DEFAULT_CONFIGS), nur Sticker-Add darüber.
-    sealImgSrc: 'https://www.provenexpert.com/profile/de-de/sticker-2026/brown.svg',
-    sealImgAlt: 'ProvenExpert · Von Kunden empfohlen 2026 · Kuiper Brandschutz',
-    sealLinkHref: 'https://www.provenexpert.com/de-de/kuiper-brandschutz/',
-  },
+  // Section-Numbers ('02 — Vertrauen', '04 — ...', ...) RAUS — V2 zeigt keine Section-Nummern
+  'bsh-usps': { eyebrow: '' },
+  'bsh-story': { photoOverlap: true },
+  'bsh-member': { fullColor: true },
+  'bsh-testi': { eyebrow: '' },
+  'bsh-steps': { eyebrow: '' },
+  // bsh-pe bleibt 1:1 V1-Astro (Default-Config) — kein Sticker mehr
+  'bsh-hybrid': { eyebrow: '' },
+  'bsh-team': { eyebrow: '' },
+  'bsh-loc': { eyebrow: '' },
+  'bsh-faq': { eyebrow: '' },
+  'bsh-final': { eyebrow: '' },
+  'bsh-open': { eyebrow: '' },
 };
 
 /**

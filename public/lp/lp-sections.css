@@ -384,3 +384,115 @@
   .kf-vid__play-circle, .kf-vid__play-pulse { width: 72px; height: 72px; }
   .kf-vid__play-circle svg { width: 44px; height: 44px; }
 }
+
+/* ─────────────────────────────────────────────────
+ * V1-Astro-Footer "kf-s12" 1:1 — Bk-Direktive 2026-06-01.
+ * Source: brandschutzhelfer-ausbildung.astro Footer.
+ * Verwendet --kf-u CSS-Variable (vom LpFrame gesetzt).
+ * ───────────────────────────────────────────────── */
+.kf-s12 {
+  --u: calc(100vw / 1745);
+  width: 100vw;
+  min-height: calc(324 * var(--u));
+  background: linear-gradient(45deg, #0b1a4d, #125a6e);
+  color: #fff;
+  box-sizing: border-box;
+}
+.kf-s12 *, .kf-s12 *::before, .kf-s12 *::after { box-sizing: border-box; }
+.kf-s12__inner {
+  width: 100%;
+  padding: calc(64 * var(--u)) calc(160 * var(--u)) calc(40 * var(--u)) calc(160 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(48 * var(--u));
+}
+.kf-s12__row {
+  display: flex;
+  flex-direction: row;
+  gap: calc(24 * var(--u));
+  align-items: flex-start;
+}
+.kf-s12__logo { width: calc(331 * var(--u)); flex-shrink: 0; display: block; }
+.kf-s12__logo img { width: 100%; height: auto; display: block; }
+.kf-s12__cols {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: calc(16 * var(--u));
+  align-items: flex-start;
+}
+.kf-s12__col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: Figtree, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: calc(16 * var(--u));
+  line-height: calc(22 * var(--u));
+  color: #a4e2ea;
+  font-style: normal;
+}
+.kf-s12__col strong { font-weight: 700; color: #a4e2ea; }
+.kf-s12__col span, .kf-s12__col a, .kf-s12__col p { color: rgba(255,255,255,0.95); font-weight: 400; }
+.kf-s12__addr-line { font-size: calc(8 * var(--u)); line-height: calc(16 * var(--u)); }
+.kf-s12__col a { text-decoration: none; transition: color 0.15s ease; }
+.kf-s12__col a:hover { color: #30c4ed; }
+.kf-s12__hinweis { margin: 0; }
+.kf-s12__totop {
+  width: calc(36 * var(--u));
+  height: calc(36 * var(--u));
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #a4e2ea;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.kf-s12__totop:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.kf-s12__totop svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); display: block; }
+.kf-s12__bottom {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(24 * var(--u));
+}
+.kf-s12__legal {
+  display: flex;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  font-family: Figtree, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: calc(16 * var(--u));
+  line-height: calc(22 * var(--u));
+  color: #a4e2ea;
+}
+.kf-s12__legal a { color: #a4e2ea; text-decoration: none; transition: color 0.15s ease; }
+.kf-s12__legal a:hover { color: #30c4ed; }
+.kf-s12__legal span { opacity: 0.5; }
+.kf-s12__social { display: flex; flex-direction: row; gap: calc(16 * var(--u)); }
+.kf-s12__social-link {
+  width: calc(24 * var(--u));
+  height: calc(24 * var(--u));
+  color: #3dc8d7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+.kf-s12__social-link:hover { color: #30c4ed; }
+.kf-s12__social-link svg { width: 100%; height: 100%; }
+
+@media (max-width: 900px) {
+  .kf-s12 { --u: calc(100vw / 480) !important; }
+  .kf-s12__inner { gap: 24px !important; padding: 32px 20px !important; }
+  .kf-s12__row { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
+  .kf-s12__logo { width: 180px !important; }
+  .kf-s12__cols { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .kf-s12__bottom { flex-wrap: wrap !important; }
+  .kf-s12__totop { align-self: flex-end; }
+}

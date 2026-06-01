@@ -22,6 +22,10 @@ type Props = {
   leadSource?: string;
   endpoint?: string;
   lpId?: string;
+  /** Custom Form-Title (Default: 'Jetzt direkt Infos und Preise anfordern') */
+  formTitle?: string;
+  /** Optional Form-Subtitle unter dem Title */
+  formSubtitle?: string;
 };
 
 declare global {
@@ -42,6 +46,8 @@ export default function BshForm({
   leadSource = 'bsh-lp',
   endpoint = '/api/lp/lead',
   lpId,
+  formTitle = 'Jetzt direkt Infos und Preise anfordern',
+  formSubtitle,
 }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -190,7 +196,8 @@ export default function BshForm({
       noValidate
       onSubmit={onSubmit}
     >
-      <h2 className="kf-kform__title">Jetzt direkt Infos und Preise anfordern</h2>
+      <h2 className="kf-kform__title">{formTitle}</h2>
+      {formSubtitle && <p className="kf-kform__sub">{formSubtitle}</p>}
 
       <label className="kf-kform__field">
         <span className="kf-kform__label">Unternehmensname *</span>
