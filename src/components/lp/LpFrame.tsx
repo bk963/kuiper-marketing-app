@@ -8,6 +8,7 @@
  * aus mkt_site_settings o.ä.). Heute: hardcoded Kuiper-Defaults.
  */
 import type { ReactNode } from 'react';
+import FooterTopButton from './_FooterTopButton';
 
 export type LpFrameConfig = {
   /** Trust-Bar-Texte */
@@ -141,17 +142,7 @@ function FooterMain() {
                 Die Angebote &amp; Inhalte dieser Seite richten sich ausdrücklich nur an Gewerbetreibende &amp; Unternehmer im Sinne des §14 BGB.
               </p>
             </div>
-            <button
-              type="button"
-              className="kf-s12__totop"
-              aria-label="Nach oben scrollen"
-              onClick={() => { if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
-            </button>
+            <FooterTopButton />
           </div>
         </div>
         <div className="kf-s12__bottom">
