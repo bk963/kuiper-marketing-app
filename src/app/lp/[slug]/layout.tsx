@@ -24,11 +24,13 @@ export default function LpLayout({ children }: { children: ReactNode }) {
       <link rel="stylesheet" href="/lp/global.css" />
       <link rel="stylesheet" href="/lp/lp-sections.css" />
 
-      {/* Font-Awesome für kf-bsh-card__icon <i class="fas fa-..."> */}
+      {/* Font-Awesome für kf-bsh-card__icon <i class="fas fa-..."> .
+       * Bugfix 2026-06-01: SRI-Hash stimmte nicht zum 6.7.2-CSS — Browser blockierte FA,
+       * Icons unsichtbar. Korrekter SHA-512 gesetzt (manuell verifiziert gegen cdnjs). */}
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
-        integrity="sha512-WBQiX2hmrK1WTZIYwYEKpWPYbmqV+vMV+iLpb2cYHC+xxqv0EgKsfOyFw57iiR5G6/zJpRP9ScVrIA13EkRDvg=="
+        integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
         crossOrigin="anonymous"
         referrerPolicy="no-referrer"
       />
