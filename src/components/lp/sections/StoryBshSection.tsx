@@ -21,11 +21,16 @@ export type StoryBshConfig = {
   paragraphs: string[];
   photoSrc?: string;
   photoAlt?: string;
+  /** V2: Foto ragt über Section-Grenze (z.B. Hand über die nachfolgende Section) */
+  photoOverlap?: boolean;
 };
 
 export default function StoryBshSection({ config }: { config: StoryBshConfig }) {
+  const sectionClass = config.photoOverlap
+    ? 'kf-bsh-story kf-bsh-story--overlap'
+    : 'kf-bsh-story';
   return (
-    <section className="kf-bsh-story">
+    <section className={sectionClass}>
       <div className="kf-bsh-story__inner">
         <div className="kf-bsh-story__text">
           <h2 className="kf-bsh-story__headline">

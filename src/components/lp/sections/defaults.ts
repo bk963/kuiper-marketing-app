@@ -107,7 +107,10 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
       { icon: 'fas fa-phone-alt',      title: '24/7 erreichbar',          body: 'Persönlicher Ansprechpartner für alle Fragen — vor, während und nach der Schulung' },
     ],
   },
-  // bsh-story bleibt — BSD-LP zeigt dass der Story-Pitch funktioniert
+  'bsh-story': {
+    // Overlap-Mode: Portrait-Hand ragt über Section-Grenze (V2-only)
+    photoOverlap: true,
+  },
   // bsh-member bleibt — Verbands-Logos sind statisches Trust-Signal
   // bsh-testi bleibt — Video-Testimonials sind starkes Signal
   // bsh-pe bleibt — ProvenExpert-Widget

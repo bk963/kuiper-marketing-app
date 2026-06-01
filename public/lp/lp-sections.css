@@ -170,6 +170,16 @@
 .kf-bsh-story__photo { position: absolute; left: calc(1080 * var(--kf-u)); bottom: 0; width: calc(665 * var(--kf-u)); height: calc(780 * var(--kf-u)); overflow: hidden; z-index: 0; }
 .kf-bsh-story__photo img { position: absolute; left: calc(-50 * var(--kf-u)); bottom: 0; width: calc(820 * var(--kf-u)); height: auto; display: block; z-index: 1; }
 
+/* V2-Overlap-Variante: Hand des Portraits ragt über Section-Grenze.
+ * Aktiviert via config.photoOverlap=true → CSS-Klasse kf-bsh-story--overlap.
+ * Bricht overflow:hidden auf Section + Photo-Wrapper auf, hebt z-index hoch
+ * sodass das Foto über nachfolgende Sections lappt. */
+.kf-bsh-story--overlap { overflow: visible; }
+.kf-bsh-story--overlap .kf-bsh-story__inner { overflow: visible; }
+.kf-bsh-story--overlap .kf-bsh-story__photo { overflow: visible; height: auto; z-index: 5; }
+.kf-bsh-story--overlap .kf-bsh-story__photo img { width: calc(900 * var(--kf-u)); left: calc(-80 * var(--kf-u)); bottom: calc(-60 * var(--kf-u)); z-index: 6; filter: drop-shadow(0 calc(20 * var(--kf-u)) calc(40 * var(--kf-u)) rgba(0,0,0,0.25)); }
+
+
 /* === Member === */
 .kf-bsh-member { background: #fff; padding: calc(64 * var(--kf-u)) calc(160 * var(--kf-u)); border-top: 1px solid rgba(11,26,77,0.06); border-bottom: 1px solid rgba(11,26,77,0.06); }
 .kf-bsh-member__inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: calc(48 * var(--kf-u)); }
