@@ -93,12 +93,13 @@ export const BSH_V2_ORDER: BshSectionType[] = [
  */
 export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
   'bsh-hero': {
-    // Sektions-Optimierung 1 (2026-06-01): Inhouse + Bundesweit-USP schärfer
-    eyebrow: '★ Brandschutzhelfer-Ausbildung · Bundesweit · Inhouse vor Ort',
-    headlinePre: 'Brandschutz von',
+    // Sektions-Optimierung 1 (2026-06-01): aus früherer V2-Content-Version (dcf8179) restauriert.
+    // Keyword "Brandschutzhelfer-Ausbildung" direkt in H1 (SEO + Klarheit) statt nur "Brandschutz".
+    eyebrow: '★ Brandschutzhelfer-Ausbildung Bundesweit · Inhouse',
+    headlinePre: 'Brandschutzhelfer-Ausbildung von',
     headlineAccent: 'echten Feuerwehrmännern',
-    subline: 'Wir kommen mit komplettem Equipment direkt zu Ihnen ins Unternehmen — bundesweit, ab 8 Teilnehmern. Praxisnah mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
-    formTitle: 'Jetzt unverbindlich Infos und Preise anfordern',
+    subline: 'Wir kommen mit allem Equipment direkt zu Ihnen ins Unternehmen — bundesweit. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2. Ab 8 Teilnehmer.',
+    formTitle: 'Jetzt direkt Infos und Preise anfordern',
     // V2-Add-Ons:
     leadSource: 'bsh-lp-v2',
     formId: 'bsh-hero-v2',
