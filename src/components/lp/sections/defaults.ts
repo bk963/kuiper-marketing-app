@@ -93,8 +93,13 @@ export const BSH_V2_ORDER: BshSectionType[] = [
  */
 export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
   'bsh-hero': {
-    // INHALTLICH identisch zu V1-Astro (alle anderen Felder via BSH_DEFAULT_CONFIGS).
-    // STYLE-Adds:
+    // Sektions-Optimierung 1 (2026-06-01): Inhouse + Bundesweit-USP schärfer
+    eyebrow: '★ Brandschutzhelfer-Ausbildung · Bundesweit · Inhouse vor Ort',
+    headlinePre: 'Brandschutz von',
+    headlineAccent: 'echten Feuerwehrmännern',
+    subline: 'Wir kommen mit komplettem Equipment direkt zu Ihnen ins Unternehmen — bundesweit, ab 8 Teilnehmern. Praxisnah mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
+    formTitle: 'Jetzt unverbindlich Infos und Preise anfordern',
+    // V2-Add-Ons:
     leadSource: 'bsh-lp-v2',
     formId: 'bsh-hero-v2',
     customPlayButton: true,
