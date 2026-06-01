@@ -18,7 +18,7 @@
 import { notFound } from 'next/navigation';
 import { mktLp } from '@/lib/mkt-lp';
 import SectionRenderer from '@/components/lp/SectionRenderer';
-import { generateBshDefaultSections } from '@/components/lp/sections/defaults';
+import { generateBshDefaultSections, generateBshV2Sections } from '@/components/lp/sections/defaults';
 import { resolveVariant, pickSections, incrementView } from '@/lib/lp-ab';
 
 export const dynamic = 'force-dynamic';
@@ -33,11 +33,17 @@ const HARDCODED_LP_META: Record<string, { title: string; description?: string }>
     title: 'Brandschutzhelfer Ausbildung von echten Feuerwehrmännern — Kuiper Brandschutz GmbH',
     description: 'Brandschutzhelfer Ausbildung bundesweit direkt bei Ihnen vor Ort. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
   },
+  // V2 — Optimierungs-Sandbox (2026-06-01). Start: identische Meta, wird iterativ überschrieben.
+  'brandschutzhelfer-ausbildung-v2': {
+    title: 'Brandschutzhelfer Ausbildung von echten Feuerwehrmännern — Kuiper Brandschutz GmbH',
+    description: 'Brandschutzhelfer Ausbildung bundesweit direkt bei Ihnen vor Ort. Praxisnah, mit Zertifikat nach DGUV 205-023 und ASR 2.2.',
+  },
 };
 
 /** Slug → Default-Sections (Editor-driven Fallback ohne PB-Record). */
 function getDefaultSectionsForSlug(slug: string) {
   if (slug === 'brandschutzhelfer-ausbildung') return generateBshDefaultSections();
+  if (slug === 'brandschutzhelfer-ausbildung-v2') return generateBshV2Sections();
   return null;
 }
 
