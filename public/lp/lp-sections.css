@@ -198,6 +198,11 @@
 .kf-bsh-pe { background: #f3f3f3; padding: 56px 20px; display: flex; justify-content: center; }
 .kf-bsh-pe__inner { width: 100%; max-width: 1040px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .kf-bsh-pe__label { font-family: "DM Sans", sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(13,138,165); margin: 0; text-align: center; }
+.kf-bsh-pe__seal { display: flex; justify-content: center; align-items: center; margin: 8px 0 6px; }
+.kf-bsh-pe__seal a { display: inline-block; transition: transform 0.2s; }
+.kf-bsh-pe__seal a:hover { transform: scale(1.04); }
+.kf-bsh-pe__seal img { display: block; max-width: 100%; height: auto; }
+
 
 /* === Steps === */
 .kf-bsh-steps { background: #fff; padding: calc(120 * var(--kf-u)) calc(160 * var(--kf-u)); }

@@ -113,7 +113,16 @@ export const BSH_V2_CONFIGS: Partial<Record<BshSectionType, any>> = {
   },
   // bsh-member bleibt — Verbands-Logos sind statisches Trust-Signal
   // bsh-testi bleibt — Video-Testimonials sind starkes Signal
-  // bsh-pe bleibt — ProvenExpert-Widget
+  'bsh-pe': {
+    label: 'Ausgezeichnete Kundenbewertungen',
+    // BSD-Profil-URL nutzen (Kuiper-Brandschutz statt brandschutzdozenten),
+    // style=black für sichtbares Rendering auf hellem Section-Hintergrund
+    widgetSrc: 'https://www.provenexpert.com/widget/landing_kuiper-brandschutz.js?feedback=1&avatar=0&competence=1&style=black',
+    // Statisches Award-Badge — sichtbar auch wenn JS-Widget nicht lädt
+    sealImgSrc: 'https://www.provenexpert.com/profile/de-de/sticker-2026/brown.svg',
+    sealImgAlt: 'ProvenExpert · Von Kunden empfohlen 2026 · Kuiper Brandschutz',
+    sealLinkHref: 'https://www.provenexpert.com/de-de/kuiper-brandschutz/',
+  },
   'bsh-steps': {
     eyebrow: '05 — Ablauf',
     headlinePre: 'In 3 Schritten zur',
