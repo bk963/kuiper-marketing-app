@@ -86,3 +86,39 @@ export async function pbGet(collection: string, id: string): Promise<any | null>
     return await r.json();
   } catch { return null; }
 }
+
+export async function pbCreate(collection: string, data: Record<string, any>): Promise<{ record?: any; error?: string }> {
+  const su = await getSuperuserToken();
+  if (!su) return { error: 'kein PB-Token' };
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records`, {
+      method: 'POST', headers: pbHeaders({ Authorization: su }), body: JSON.stringify(data),
+    });
+    if (!r.ok) return { error: `HTTP ${r.status}: ${(await r.text()).slice(0, 200)}` };
+    return { record: await r.json() };
+  } catch (e: any) { return { error: e?.message?.slice(0, 200) || 'create error' }; }
+}
+
+export async function pbUpdate(collection: string, id: string, data: Record<string, any>): Promise<{ record?: any; error?: string }> {
+  const su = await getSuperuserToken();
+  if (!su) return { error: 'kein PB-Token' };
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records/${id}`, {
+      method: 'PATCH', headers: pbHeaders({ Authorization: su }), body: JSON.stringify(data),
+    });
+    if (!r.ok) return { error: `HTTP ${r.status}: ${(await r.text()).slice(0, 200)}` };
+    return { record: await r.json() };
+  } catch (e: any) { return { error: e?.message?.slice(0, 200) || 'update error' }; }
+}
+
+export async function pbDelete(collection: string, id: string): Promise<{ ok: boolean; error?: string }> {
+  const su = await getSuperuserToken();
+  if (!su) return { ok: false, error: 'kein PB-Token' };
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records/${id}`, {
+      method: 'DELETE', headers: pbHeaders({ Authorization: su }),
+    });
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message?.slice(0, 200) || 'delete error' }; }
+}
