@@ -1,8 +1,8 @@
 ---
 title: KPI-Cockpit (prompt-getriebenes Marketing-Dashboard)
 project: kuiper-marketing-app
-status: P1+P2+P3 gebaut, Deploy ausstehend (Bk-GO)
-date: 2026-06-02
+status: LIVE (P1+P2+P3) auf marketing.kuiper-safety.de/admin — E2E verifiziert
+date: 2026-06-03
 branch: feat/kpi-cockpit
 tags: [kpi, dashboard, gex44, llm, pocketbase, google-ads]
 ---
@@ -34,7 +34,7 @@ NL-Frage ─▶ /api/admin/kpi/ask ─▶ prompt.ts (GEX44 qwen2.5, JSON-Mode, O
                                       ▼
                                   KpiResult {value, series, breakdown, source}
                                       │
-  📌 Pin ─▶ /api/admin/kpi/tiles ─▶ tiles.ts ─▶ mkt_kpi_tiles (Marketing-PB)
+  📌 Pin ─▶ /admin/api/kpi/tiles ─▶ tiles.ts ─▶ mkt_kpi_tiles (pb-tracking-PB!)
                                       │  speichert NUR die Spec → bei jedem Aufruf live neu gerechnet
                                       ▼
                                   Home rendert Core-KPIs + gepinnte Kacheln (recharts)
@@ -80,14 +80,28 @@ Konform zu [[feedback_drive_extraktion_dsgvo]] / Keine-Token-LLM-Regel.
 - GEX44: „Conversions letzte 30 Tage in Köln" → `{metric:conversions,city:Köln,days:30}` → 48,86 live ✅
 - `next build` grün. Smoke: `scripts/kpi-smoke.ts` (tsx, manuell).
 
-## Deploy-Voraussetzungen (vor Live)
+## Deploy (erledigt 2026-06-03)
 
-1. **ENV in Coolify** (App `ndlcdaa6au2to79f75o6iggu`):
-   `GEX44_URL=https://gex44.kuiper-safety.de`, `GEX44_USER=bjoern`, `GEX44_PASS=…`, `GEX44_MODEL=qwen2.5:32b`
-2. **Collection `mkt_kpi_tiles`** in Marketing-PB anlegen (von app-prod mit Runtime-Creds):
-   Felder `title(text) spec(json) unit(text) position(number) span(number) viz(text) owner(text)`.
-   (Pin-Feature degradiert sauber, falls Collection fehlt — Rest läuft.)
-3. Deploy = echter **Coolify-Rebuild** (kein docker cp), DNS-Check vorab.
+1. ✅ **ENV in Coolify** (App `ndlcdaa6au2to79f75o6iggu`): `GEX44_URL/USER/PASS/MODEL` gesetzt.
+2. ✅ **Collection `mkt_kpi_tiles`** in **pb-tracking-PB** angelegt (Marketing-PB ist write-broken, s.u.).
+3. ✅ Coolify-Rebuild von `main`, DNS-Check vorab. Login-Fix per PB-Restart (s.u.).
+
+## 🔴 Incident: Marketing-PB korrupt (pb.kuiper-safety.de — shared mit LIVE-Blog)
+
+`PRAGMA integrity_check` auf `/data/data.db` → **„database disk image is malformed (11)"**
+(kaputte btree-Pages Tree 164/169/10158). Folge: Reads ok (heile Pages), **Writes/DDL scheitern**.
+Das brach (a) den Admin-Login (auth-with-password 500 → per PB-Restart Read-Pfad wieder ok) und
+(b) Schema-/Record-Writes (400). Letzte echten Writes: blog_articles 15.04., _superuser 23.04.
+Korruptions-Backups vorhanden (`corrupt-2026-05-19/`, `data.db.bak-pre-did-fix-20260515`).
+
+**Deshalb:** Pin-Store läuft auf der gesunden **pb-tracking-PB** statt Marketing-PB.
+**Recovery (offen, gated):** `sqlite3 .recover` → neue DB + validieren + swap + PB-Restart,
+oder Restore aus gutem Backup. Betrifft Blog-CMS + Marketing-Writes. Session-Backup:
+`/root/pb-backups/data.db.*` auf PB-Host 46.225.159.70.
+
+## Cookie-Scope (wichtig)
+Auth-Cookie `ks_admin_session` ist **path=`/admin`** → API-Routen MÜSSEN unter `/admin/api/*`
+liegen (nicht `/api/admin/*`), sonst wird der Cookie nicht mitgeschickt (401).
 
 ## Roadmap
 
