@@ -40,6 +40,13 @@ export type HeroBshConfig = {
 };
 
 export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig; lpId?: string }) {
+  // Mobile-only H1-Split: "Brandschutzhelfer-Ausbildung von" -> "Brandschutzhelfer" +
+  // Zeilenumbruch + "Ausbildung von ..." OHNE Bindestrich. Desktop bleibt unveraendert.
+  const _pre = config.headlinePre || '';
+  const _di = _pre.indexOf('-');
+  const _hasSplit = _di > 0 && _di < _pre.length - 1;
+  const _m1 = _hasSplit ? _pre.slice(0, _di) : _pre;
+  const _m2 = _hasSplit ? _pre.slice(_di + 1) : '';
   return (
     <section className="kf-bsh-hero" id="anfrage">
       <div className="kf-bsh-hero__top">
@@ -49,9 +56,16 @@ export default function HeroBshSection({ config, lpId }: { config: HeroBshConfig
           </EditableText>
         )}
         <h1 className="kf-bsh-hero__headline">
-          <EditableText as="span" fieldKey="headlinePre">
+          {/* Desktop/Editor: Original-Headline (editierbar) */}
+          <EditableText as="span" fieldKey="headlinePre" className="kf-hh-full">
             {config.headlinePre}
-          </EditableText>{' '}
+          </EditableText>
+          {/* Mobile-only: ohne Bindestrich, Umbruch nach erstem Wort */}
+          {_hasSplit && (
+            <span className="kf-hh-mob" aria-hidden="true">
+              <span className="kf-hh-mob-1">{_m1}</span>{_m2}
+            </span>
+          )}{' '}
           <EditableText as="span" fieldKey="headlineAccent" className="kf-bsh-hero__accent">
             {config.headlineAccent}
           </EditableText>

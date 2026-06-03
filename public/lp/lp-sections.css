@@ -304,6 +304,9 @@
 /* Globale Safety-Net Overflow */
 .kf-bsh-hero__accent, .kf-bsh-story__accent, .kf-bsh-loc__accent { word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
 
+/* Mobile-only H1-Split-Helfer: Desktop versteckt die Mobile-Variante (nur Bindestrich-Version sichtbar) */
+.kf-hh-mob { display: none; }
+
 @media (max-width: 900px) {
   :root { --kf-u: calc(100vw / 480); }
   .kf-bsh-hero__frame { grid-template-columns: 1fr; padding: 32px 20px; gap: 32px; }
@@ -324,6 +327,24 @@
   .kf-bsh-story__text, .kf-bsh-story__inner { width: 100% !important; max-width: 100% !important; }
   .kf-bsh-story__text { position: static !important; padding: 0 !important; }
   .kf-bsh-story__body, .kf-bsh-story__body p { width: 100% !important; }
+
+  /* ─── Mobile-Fixes 2026-06-03 (nur < 900px) ─── */
+  /* H1: "Brandschutzhelfer" / Umbruch / "Ausbildung von ..." OHNE Bindestrich */
+  .kf-hh-full { display: none !important; }
+  .kf-hh-mob { display: inline; }
+  .kf-hh-mob-1 { display: block; }
+  /* TÜV-Block: gestapelt, zentriert, responsive (kein negativer Rand mehr) */
+  .kf-bsh-hero__tuev { flex-direction: column; align-items: center; text-align: center; gap: 16px; margin: 24px 0 0 !important; padding: 24px 20px !important; }
+  .kf-bsh-hero__tuev-logo { margin: 0 auto; width: 96px !important; }
+  .kf-bsh-hero__tuev-text { flex: none !important; text-align: center; }
+  .kf-bsh-hero__tuev-title { font-size: 20px !important; }
+  .kf-bsh-hero__tuev-body { font-size: 14px !important; max-width: 100% !important; }
+  /* Hybrid / Sprachen-Block: alles zentriert + responsive, Flaggen umbrechen */
+  .kf-bsh-hybrid, .kf-bsh-hybrid__inner { text-align: center !important; }
+  .kf-bsh-hybrid__body, .kf-bsh-hybrid__body p { text-align: center !important; }
+  .kf-hybrid-flags, .kf-bsh-hybrid__langs { display: flex !important; justify-content: center !important; flex-wrap: wrap !important; }
+  .kf-hybrid-langs-block { text-align: center !important; margin-left: auto !important; margin-right: auto !important; }
+  .kf-bsh-hybrid .kf-bsh-pill { display: inline-flex !important; }
 }
 
 /* V2-Hero-Video: Custom-Play-Button-Overlay (Clickfunnels-Style)
