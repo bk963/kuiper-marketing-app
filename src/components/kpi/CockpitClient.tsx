@@ -34,7 +34,7 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
     if (!text || asking) return;
     setAsking(true); setAskErr(null); setAskResult(null); setAskSpec(null);
     try {
-      const r = await fetch('/api/admin/kpi/ask', {
+      const r = await fetch('/admin/api/kpi/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text }),
       });
@@ -49,7 +49,7 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
     if (!askSpec || !askResult || pinning) return;
     setPinning(true);
     try {
-      const r = await fetch('/api/admin/kpi/tiles', {
+      const r = await fetch('/admin/api/kpi/tiles', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spec: askSpec }),
       });
@@ -64,7 +64,7 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
   async function unpin(id: string) {
     setBusyId(id);
     try {
-      const r = await fetch(`/api/admin/kpi/tiles/${id}`, { method: 'DELETE' });
+      const r = await fetch(`/admin/api/kpi/tiles/${id}`, { method: 'DELETE' });
       if (r.ok) setTiles((t) => t.filter((x) => x.id !== id));
     } finally { setBusyId(null); }
   }

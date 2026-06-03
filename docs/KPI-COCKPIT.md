@@ -54,7 +54,7 @@ NL-Frage ─▶ /api/admin/kpi/ask ─▶ prompt.ts (GEX44 qwen2.5, JSON-Mode, O
 | `src/components/kpi/KpiTile.tsx` | Kachel (Zahl + Sparkline/Bar via recharts) |
 | `src/components/kpi/CockpitClient.tsx` | Prompt-Leiste + gepinntes Grid (interaktiv) |
 | `src/app/admin/page.tsx` | Home → Cockpit (Core-KPIs + Prompt + Pins + Deep-Dive) |
-| `src/app/api/admin/kpi/{ask,run,tiles,tiles/[id]}/route.ts` | API |
+| `src/app/admin/api/kpi/{ask,run,tiles,tiles/[id]}/route.ts` | API (unter `/admin` wg. Cookie-Path-Scope) |
 
 ## Metriken
 
