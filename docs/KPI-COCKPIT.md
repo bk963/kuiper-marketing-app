@@ -109,5 +109,9 @@ liegen (nicht `/api/admin/*`), sonst wird der Cookie nicht mitgeschickt (401).
 
 - **P1 Fundament + Connectoren + Core-KPIs** ✅
 - **P2 Prompt-Layer (GEX44)** ✅
-- **P3 Pin-to-Dashboard** ✅ (Collection-Anlage = Deploy-Step)
-- **P4 Polish:** Zeitraum-Vergleiche (Δ vs. Vorperiode), Drag-Reorder, Span-Toggle, Alerts, Export, Caching
+- **P3 Pin-to-Dashboard** ✅
+- **P4 Polish** ✅ — Δ vs. Vorperiode (Trend-Pfeile, Ampelfarbe je `METRIC_HIGHER_IS_BETTER`),
+  Kachel-Reorder (↑/↓), Breite-Toggle (1/2 via `span`), „Aktualisieren"-Button. Exakte Ads-
+  Datumsbereiche (`BETWEEN`) statt relativer `LAST_N_DAYS`. Kuratiertes Start-Dashboard (5 Kacheln)
+  vorgepinnt. Verifiziert live: cost ▼5 %, conversions ▼18 % vs. Vorperiode.
+- **Offen (optional):** Alerts/Schwellwerte, CSV/PNG-Export, Server-Caching der Engine-Reads.
