@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
 import { formatValue, shortDate } from '@/lib/kpi/format';
-import type { KpiResult, KpiUnit } from '@/lib/kpi/types';
+import { METRIC_HIGHER_IS_BETTER, type KpiResult, type KpiUnit } from '@/lib/kpi/types';
 
 const CYAN = '#00C2FF';
 const NAVY = '#0b1a4d';
@@ -17,34 +17,40 @@ function pickViz(r: KpiResult, viz: string): 'number' | 'line' | 'bar' {
 }
 
 export default function KpiTile({
-  result, viz = 'auto', onUnpin, busy,
+  result, viz = 'auto', onUnpin, onMoveUp, onMoveDown, onToggleSpan, busy,
 }: {
   result: KpiResult;
   viz?: string;
   onUnpin?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onToggleSpan?: () => void;
   busy?: boolean;
 }) {
   const unit = result.unit as KpiUnit;
   const kind = pickViz(result, viz);
   const big = formatValue(result.value, unit);
+  const hasControls = onUnpin || onMoveUp || onMoveDown || onToggleSpan;
+  const btn = "w-6 h-6 rounded-md text-slate-300 hover:bg-slate-100 transition text-sm leading-none flex items-center justify-center disabled:opacity-30";
 
   return (
     <div className="relative p-5 bg-white rounded-xl border border-slate-200/70 hover:border-brand/50 transition group">
-      {onUnpin && (
-        <button
-          onClick={onUnpin}
-          disabled={busy}
-          title="Vom Dashboard entfernen"
-          className="absolute top-3 right-3 w-6 h-6 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition text-lg leading-none"
-        >×</button>
+      {hasControls && (
+        <div className="absolute top-2.5 right-2.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
+          {onMoveUp && <button onClick={onMoveUp} disabled={busy} title="Nach vorne" className={`${btn} hover:text-navy`}>↑</button>}
+          {onMoveDown && <button onClick={onMoveDown} disabled={busy} title="Nach hinten" className={`${btn} hover:text-navy`}>↓</button>}
+          {onToggleSpan && <button onClick={onToggleSpan} disabled={busy} title="Breite umschalten" className={`${btn} hover:text-brand`}>⇿</button>}
+          {onUnpin && <button onClick={onUnpin} disabled={busy} title="Entfernen" className={`${btn} hover:text-rose-500 hover:bg-rose-50 text-lg`}>×</button>}
+        </div>
       )}
-      <div className="text-[11px] uppercase tracking-wider text-slate-500 font-bold pr-6">{result.label}</div>
+      <div className="text-[11px] uppercase tracking-wider text-slate-500 font-bold pr-16">{result.label}</div>
 
       {!result.ok ? (
         <div className="mt-2 text-sm text-rose-600">{result.error || 'Nicht verfügbar'}</div>
       ) : (
         <>
           <div className="text-4xl font-extrabold mt-1 text-ink tabular-nums">{big}</div>
+          {result.delta && result.delta.pct != null && <DeltaBadge result={result} />}
 
           {kind === 'line' && result.series && (
             <div className="h-24 mt-3 -mx-1">
@@ -98,6 +104,20 @@ export default function KpiTile({
           {result.note && <div className="mt-1 text-[11px] text-amber-600">{result.note}</div>}
         </>
       )}
+    </div>
+  );
+}
+
+function DeltaBadge({ result }: { result: KpiResult }) {
+  const pct = result.delta!.pct!;
+  const higherBetter = METRIC_HIGHER_IS_BETTER[result.spec.metric] ?? true;
+  const good = (pct >= 0) === higherBetter;
+  const arrow = pct >= 0 ? '▲' : '▼';
+  const cls = Math.abs(pct) < 0.0005 ? 'text-slate-400' : good ? 'text-emerald-600' : 'text-rose-500';
+  return (
+    <div className={`mt-1 text-xs font-semibold ${cls}`}>
+      {arrow} {Math.abs(pct * 100).toLocaleString('de-DE', { maximumFractionDigits: 0 })}%
+      <span className="text-slate-400 font-normal"> vs. Vorperiode</span>
     </div>
   );
 }

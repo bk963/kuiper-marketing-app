@@ -8,7 +8,9 @@
  *   sessions/users         → GA4
  *   gsc_*                  → Search Console
  *
- * Das LLM (GEX44) baut NUR die Spec — Daten kommen immer aus echten APIs.
+ * Bei Einzelwert-Kacheln (dimension none) wird zusätzlich die gleich lange
+ * Vorperiode berechnet → res.delta (für Trend-Pfeile). Das LLM (GEX44) baut nur
+ * die Spec — Daten kommen immer aus echten APIs.
  */
 import {
   type QuerySpec, type KpiResult, type KpiMetric,
@@ -23,11 +25,11 @@ import { gscSiteOverview } from '@/lib/gsc';
 
 const LEAD_METRICS: KpiMetric[] = ['qualified_leads', 'leads', 'submit_to_qualified_rate', 'avg_quality_score', 'revenue', 'won_deals'];
 const ADS_METRICS: KpiMetric[] = ['cost', 'conversions', 'cpa', 'clicks', 'impressions', 'ctr', 'cpc', 'roas', 'conversion_value'];
+const DELTA_METRICS = new Set<KpiMetric>([...LEAD_METRICS, ...ADS_METRICS, 'cpa_qualified']);
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 function iso(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-/** Spec → { days, fromISO, toISO }. */
 function resolveRange(spec: QuerySpec): { days: number; fromISO: string; toISO: string } {
   if (spec.from && spec.to) {
     const from = new Date(spec.from + 'T00:00:00');
@@ -39,6 +41,14 @@ function resolveRange(spec: QuerySpec): { days: number; fromISO: string; toISO: 
   const to = new Date();
   const from = new Date(to.getTime() - (days - 1) * 86400000);
   return { days, fromISO: iso(from), toISO: iso(to) };
+}
+
+/** Gleich lange Vorperiode direkt vor [fromISO,toISO]. */
+function prevRange(fromISO: string, days: number): { from: string; to: string } {
+  const from = new Date(fromISO + 'T00:00:00');
+  const prevTo = new Date(from.getTime() - 86400000);            // Tag vor Start
+  const prevFrom = new Date(prevTo.getTime() - (days - 1) * 86400000);
+  return { from: iso(prevFrom), to: iso(prevTo) };
 }
 
 function leadValue(rows: LeadRow[], metric: KpiMetric): number {
@@ -55,7 +65,38 @@ function leadValue(rows: LeadRow[], metric: KpiMetric): number {
 
 function baseDim(metric: KpiMetric): 'qualified_leads' | 'leads' | 'revenue' | 'won_deals' | 'avg_quality_score' {
   if (metric === 'leads' || metric === 'revenue' || metric === 'won_deals' || metric === 'avg_quality_score') return metric;
-  return 'qualified_leads'; // submit_to_qualified_rate fällt hier auf qualified zurück (Breakdown special-cased im Aufrufer)
+  return 'qualified_leads';
+}
+
+/** Reiner Skalarwert einer Metrik für einen Zeitraum — für die Vorperiode (Δ). */
+async function scalarValue(metric: KpiMetric, fromISO: string, toISO: string, days: number, spec: QuerySpec): Promise<number | null> {
+  try {
+    if (LEAD_METRICS.includes(metric)) {
+      const { rows, error } = await fetchLeads(fromISO, toISO, { city: spec.city, channel: spec.channel, course: spec.course });
+      if (error) return null;
+      return leadValue(rows, metric);
+    }
+    if (metric === 'cpa_qualified') {
+      const [cost, lr] = await Promise.all([
+        gadsMetricTotal('cost', fromISO, toISO, spec.campaign),
+        fetchLeads(fromISO, toISO, { city: spec.city, channel: spec.channel, course: spec.course }),
+      ]);
+      const q = aggregate(lr.rows).qualified;
+      return q > 0 && cost != null ? cost / q : null;
+    }
+    if (ADS_METRICS.includes(metric)) {
+      return await gadsMetricTotal(metric as GadsMetricKey, fromISO, toISO, spec.campaign);
+    }
+    return null; // GA4/GSC: kein Δ (kein Range-Support)
+  } catch { return null; }
+}
+
+async function attachDelta(res: KpiResult, metric: KpiMetric, fromISO: string, days: number, spec: QuerySpec): Promise<void> {
+  if (!DELTA_METRICS.has(metric) || res.value == null || !res.ok) return;
+  const pr = prevRange(fromISO, days);
+  const prev = await scalarValue(metric, pr.from, pr.to, days, spec);
+  const pct = prev != null && prev !== 0 ? (res.value - prev) / prev : null;
+  res.delta = { prev, pct };
 }
 
 export async function runQuery(spec: QuerySpec): Promise<KpiResult> {
@@ -78,48 +119,47 @@ export async function runQuery(spec: QuerySpec): Promise<KpiResult> {
         ...base, ok: true, value, source: 'pb-tracking',
         note: capped ? 'Limit 2000 Records erreicht — Wert ggf. unvollständig' : undefined,
       } as KpiResult;
-      // Tagesreihe (immer hilfreich)
-      res.series = metric === 'submit_to_qualified_rate'
-        ? rateSeries(rows)
-        : groupLeads(rows, 'day', baseDim(metric));
-      // Breakdown
+      res.series = metric === 'submit_to_qualified_rate' ? rateSeries(rows) : groupLeads(rows, 'day', baseDim(metric));
       if (dim && (dim === 'city' || dim === 'channel' || dim === 'course')) {
-        res.breakdown = metric === 'submit_to_qualified_rate'
-          ? rateBreakdown(rows, dim)
-          : groupLeads(rows, dim, baseDim(metric));
+        res.breakdown = metric === 'submit_to_qualified_rate' ? rateBreakdown(rows, dim) : groupLeads(rows, dim, baseDim(metric));
       } else if (dim === 'day') {
         res.breakdown = res.series;
       }
+      if (!dim) await attachDelta(res, metric, fromISO, days, spec);
       return res;
     }
 
-    // ── cpa_qualified: Ads-Spend ÷ qualifizierte Leads ───────────────
+    // ── cpa_qualified ────────────────────────────────────────────────
     if (metric === 'cpa_qualified') {
       const [cost, leadRes] = await Promise.all([
-        gadsMetricTotal('cost', days, spec.campaign),
+        gadsMetricTotal('cost', fromISO, toISO, spec.campaign),
         fetchLeads(fromISO, toISO, { city: spec.city, channel: spec.channel, course: spec.course }),
       ]);
       const qualified = aggregate(leadRes.rows).qualified;
       const value = qualified > 0 && cost != null ? cost / qualified : null;
-      return {
+      const res: KpiResult = {
         ...base, ok: cost != null, value, source: 'google-ads + pb-tracking',
         note: spec.city ? 'Spend ist konto-/kampagnenweit (Ads liefert keinen Stadt-Spend); Stadt filtert nur die Leads.' : undefined,
       } as KpiResult;
+      if (!dim) await attachDelta(res, metric, fromISO, days, spec);
+      return res;
     }
 
     // ── Ads-Metriken ─────────────────────────────────────────────────
     if (ADS_METRICS.includes(metric)) {
       const gm = metric as GadsMetricKey;
       const [value, series, breakdown] = await Promise.all([
-        gadsMetricTotal(gm, days, spec.campaign),
-        gadsMetricSeries(gm, days, spec.campaign),
-        dim === 'campaign' ? gadsMetricByCampaign(gm, days) : Promise.resolve(undefined),
+        gadsMetricTotal(gm, fromISO, toISO, spec.campaign),
+        gadsMetricSeries(gm, fromISO, toISO, spec.campaign),
+        dim === 'campaign' ? gadsMetricByCampaign(gm, fromISO, toISO) : Promise.resolve(undefined),
       ]);
       if (value == null) return { ...base, ok: false, value: null, source: 'google-ads', error: 'Google Ads nicht verbunden' } as KpiResult;
-      return {
+      const res: KpiResult = {
         ...base, ok: true, value, series, breakdown, source: 'google-ads',
         note: (spec.city && dim !== 'campaign') ? 'Stadt-Filter für Ads-Metriken nicht verfügbar (nur Leads haben Stadt).' : undefined,
       } as KpiResult;
+      if (!dim) await attachDelta(res, metric, fromISO, days, spec);
+      return res;
     }
 
     // ── GA4 ──────────────────────────────────────────────────────────
@@ -127,9 +167,7 @@ export async function runQuery(spec: QuerySpec): Promise<KpiResult> {
       const ga = await ga4Overview(days);
       if (!ga) return { ...base, ok: false, value: null, source: 'ga4', error: 'GA4 nicht verbunden' } as KpiResult;
       const value = metric === 'users' ? ga.total.users : ga.total.sessions;
-      const series = (ga.rows || []).map((r) => ({
-        date: r.dimension, value: metric === 'users' ? r.users : r.sessions,
-      }));
+      const series = (ga.rows || []).map((r) => ({ date: r.dimension, value: metric === 'users' ? r.users : r.sessions }));
       return { ...base, ok: true, value, series, source: 'ga4', error: ga.error } as KpiResult;
     }
 
@@ -150,7 +188,6 @@ export async function runQuery(spec: QuerySpec): Promise<KpiResult> {
   }
 }
 
-/** Submit→Qualified-Quote als Tagesreihe. */
 function rateSeries(rows: LeadRow[]): { date: string; value: number }[] {
   const byDay = new Map<string, { q: number; n: number }>();
   for (const r of rows) {
@@ -159,11 +196,9 @@ function rateSeries(rows: LeadRow[]): { date: string; value: number }[] {
     c.n++; if (r.qualified) c.q++;
     byDay.set(d, c);
   }
-  return [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, c]) => ({ date, value: c.n ? c.q / c.n : 0 }));
+  return [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, c]) => ({ date, value: c.n ? c.q / c.n : 0 }));
 }
 
-/** Submit→Qualified-Quote je Dimension. */
 function rateBreakdown(rows: LeadRow[], dim: 'city' | 'channel' | 'course'): { key: string; value: number }[] {
   const by = new Map<string, { q: number; n: number }>();
   for (const r of rows) {
@@ -172,6 +207,5 @@ function rateBreakdown(rows: LeadRow[], dim: 'city' | 'channel' | 'course'): { k
     c.n++; if (r.qualified) c.q++;
     by.set(key, c);
   }
-  return [...by.entries()].map(([key, c]) => ({ key, value: c.n ? c.q / c.n : 0 }))
-    .sort((a, b) => b.value - a.value);
+  return [...by.entries()].map(([key, c]) => ({ key, value: c.n ? c.q / c.n : 0 })).sort((a, b) => b.value - a.value);
 }

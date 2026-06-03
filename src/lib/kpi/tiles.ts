@@ -73,3 +73,12 @@ export async function unpinTile(id: string): Promise<{ ok: boolean; error?: stri
 export async function reorderTile(id: string, position: number): Promise<{ ok: boolean; error?: string }> {
   return patchTrackingRecord(TILES_COLLECTION, id, { position });
 }
+
+/** Aktualisiert position und/oder span einer Kachel. */
+export async function updateTile(id: string, fields: { position?: number; span?: number }): Promise<{ ok: boolean; error?: string }> {
+  const patch: Record<string, any> = {};
+  if (typeof fields.position === 'number') patch.position = fields.position;
+  if (fields.span === 1 || fields.span === 2) patch.span = fields.span;
+  if (!Object.keys(patch).length) return { ok: true };
+  return patchTrackingRecord(TILES_COLLECTION, id, patch);
+}

@@ -66,10 +66,21 @@ export interface KpiResult {
   label: string;
   series?: { date: string; value: number }[];
   breakdown?: { key: string; value: number }[];
+  /** Vergleich zur gleich langen Vorperiode (nur bei Einzelwert-Kacheln). */
+  delta?: { prev: number | null; pct: number | null };
   source: string;
   note?: string;
   error?: string;
 }
+
+/** Ist ein steigender Wert "gut"? Steuert die Δ-Ampelfarbe (z.B. Kosten runter = grün). */
+export const METRIC_HIGHER_IS_BETTER: Record<KpiMetric, boolean> = {
+  qualified_leads: true, leads: true, submit_to_qualified_rate: true, avg_quality_score: true,
+  revenue: true, won_deals: true, conversions: true, clicks: true, impressions: true,
+  ctr: true, roas: true, conversion_value: true, sessions: true, users: true,
+  gsc_clicks: true, gsc_impressions: true,
+  cost: false, cpa: false, cpa_qualified: false, cpc: false, gsc_position: false,
+};
 
 /** Default-Zeitraum, wenn die Spec keinen nennt. */
 export const DEFAULT_DAYS = 30;

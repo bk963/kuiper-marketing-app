@@ -101,64 +101,59 @@ const METRIC_SELECT = `
   metrics.impressions, metrics.clicks, metrics.cost_micros,
   metrics.conversions, metrics.conversions_value`;
 
-/** Einzelwert einer Ads-Metrik über das ganze Konto (optional 1 Kampagne). */
-export async function gadsMetricTotal(metric: GadsMetricKey, days = 30, campaignContains?: string): Promise<number | null> {
+const ZERO = { cost_micros: 0, clicks: 0, impressions: 0, conversions: 0, conversions_value: 0 };
+function addRow(a: any, m: any) {
+  a.cost_micros += Number(m?.cost_micros || 0);
+  a.clicks += Number(m?.clicks || 0);
+  a.impressions += Number(m?.impressions || 0);
+  a.conversions += Number(m?.conversions || 0);
+  a.conversions_value += Number(m?.conversions_value || 0);
+  return a;
+}
+const dateClause = (from: string, to: string) => `segments.date BETWEEN '${from}' AND '${to}'`;
+
+/** Einzelwert einer Ads-Metrik über das Konto im Zeitraum [from,to] (optional 1 Kampagne). */
+export async function gadsMetricTotal(metric: GadsMetricKey, fromISO: string, toISO: string, campaignContains?: string): Promise<number | null> {
   const customer = getCustomer();
   if (!customer) return null;
   try {
-    const from = campaignContains ? 'campaign' : 'customer';
-    const where = [`segments.date DURING LAST_${days}_DAYS`];
+    const src = campaignContains ? 'campaign' : 'customer';
+    const where = [dateClause(fromISO, toISO)];
     if (campaignContains) where.push(`campaign.name LIKE '%${campaignContains.replace(/'/g, '')}%'`, `campaign.status != 'REMOVED'`);
-    const rows = await customer.query(`SELECT ${METRIC_SELECT} FROM ${from} WHERE ${where.join(' AND ')}`);
-    // Mehrere Zeilen (je Kampagne) aufsummieren
-    const agg = rows.reduce((a: any, r: any) => {
-      const m = r.metrics || {};
-      a.cost_micros += Number(m.cost_micros || 0);
-      a.clicks += Number(m.clicks || 0);
-      a.impressions += Number(m.impressions || 0);
-      a.conversions += Number(m.conversions || 0);
-      a.conversions_value += Number(m.conversions_value || 0);
-      return a;
-    }, { cost_micros: 0, clicks: 0, impressions: 0, conversions: 0, conversions_value: 0 });
+    const rows = await customer.query(`SELECT ${METRIC_SELECT} FROM ${src} WHERE ${where.join(' AND ')}`);
+    const agg = rows.reduce((a: any, r: any) => addRow(a, r.metrics), { ...ZERO });
     return (deriveGadsRow(agg) as any)[metric] ?? 0;
   } catch { return null; }
 }
 
 /** Tagesreihe einer Ads-Metrik (für Charts). */
-export async function gadsMetricSeries(metric: GadsMetricKey, days = 30, campaignContains?: string): Promise<{ date: string; value: number }[]> {
+export async function gadsMetricSeries(metric: GadsMetricKey, fromISO: string, toISO: string, campaignContains?: string): Promise<{ date: string; value: number }[]> {
   const customer = getCustomer();
   if (!customer) return [];
   try {
-    const from = campaignContains ? 'campaign' : 'customer';
-    const where = [`segments.date DURING LAST_${days}_DAYS`];
+    const src = campaignContains ? 'campaign' : 'customer';
+    const where = [dateClause(fromISO, toISO)];
     if (campaignContains) where.push(`campaign.name LIKE '%${campaignContains.replace(/'/g, '')}%'`, `campaign.status != 'REMOVED'`);
-    const rows = await customer.query(`SELECT segments.date, ${METRIC_SELECT} FROM ${from} WHERE ${where.join(' AND ')} ORDER BY segments.date`);
+    const rows = await customer.query(`SELECT segments.date, ${METRIC_SELECT} FROM ${src} WHERE ${where.join(' AND ')} ORDER BY segments.date`);
     const byDate = new Map<string, any>();
     for (const r of rows) {
       const d = String(r.segments?.date || '');
-      const cur = byDate.get(d) || { cost_micros: 0, clicks: 0, impressions: 0, conversions: 0, conversions_value: 0 };
-      const m = r.metrics || {};
-      cur.cost_micros += Number(m.cost_micros || 0);
-      cur.clicks += Number(m.clicks || 0);
-      cur.impressions += Number(m.impressions || 0);
-      cur.conversions += Number(m.conversions || 0);
-      cur.conversions_value += Number(m.conversions_value || 0);
-      byDate.set(d, cur);
+      byDate.set(d, addRow(byDate.get(d) || { ...ZERO }, r.metrics));
     }
     return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, agg]) => ({ date, value: (deriveGadsRow(agg) as any)[metric] ?? 0 }));
   } catch { return []; }
 }
 
-/** Breakdown einer Ads-Metrik je Kampagne. */
-export async function gadsMetricByCampaign(metric: GadsMetricKey, days = 30, limit = 15): Promise<{ key: string; value: number }[]> {
+/** Breakdown einer Ads-Metrik je Kampagne im Zeitraum. */
+export async function gadsMetricByCampaign(metric: GadsMetricKey, fromISO: string, toISO: string, limit = 15): Promise<{ key: string; value: number }[]> {
   const customer = getCustomer();
   if (!customer) return [];
   try {
     const rows = await customer.query(`
       SELECT campaign.name, ${METRIC_SELECT}
       FROM campaign
-      WHERE segments.date DURING LAST_${days}_DAYS AND campaign.status != 'REMOVED'
+      WHERE ${dateClause(fromISO, toISO)} AND campaign.status != 'REMOVED'
       ORDER BY metrics.cost_micros DESC LIMIT ${limit}`);
     return rows.map((r: any) => ({
       key: r.campaign?.name || '—',

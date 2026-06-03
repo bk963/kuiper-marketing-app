@@ -69,6 +69,42 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
     } finally { setBusyId(null); }
   }
 
+  async function move(idx: number, dir: -1 | 1) {
+    const j = idx + dir;
+    if (j < 0 || j >= tiles.length) return;
+    const next = [...tiles];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setTiles(next);
+    // Positionen der beiden vertauschten Kacheln persistieren
+    await Promise.all([
+      fetch(`/admin/api/kpi/tiles/${next[idx].id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: idx + 1 }) }),
+      fetch(`/admin/api/kpi/tiles/${next[j].id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: j + 1 }) }),
+    ]).catch(() => {});
+  }
+
+  async function toggleSpan(id: string) {
+    setTiles((t) => t.map((x) => x.id === id ? { ...x, span: x.span === 2 ? 1 : 2 } : x));
+    const cur = tiles.find((x) => x.id === id);
+    const newSpan = cur && cur.span === 2 ? 1 : 2;
+    fetch(`/admin/api/kpi/tiles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ span: newSpan }) }).catch(() => {});
+  }
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function refreshAll() {
+    if (refreshing || !tiles.length) return;
+    setRefreshing(true);
+    try {
+      const updated = await Promise.all(tiles.map(async (t) => {
+        try {
+          const r = await fetch('/admin/api/kpi/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec: t.result.spec }) });
+          const d = await r.json();
+          return r.ok && d.result ? { ...t, result: d.result } : t;
+        } catch { return t; }
+      }));
+      setTiles(updated);
+    } finally { setRefreshing(false); }
+  }
+
   return (
     <div>
       {/* ── Prompt-Leiste (Hero) ── */}
@@ -121,7 +157,15 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
       <div className="mt-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Dein Dashboard</h2>
-          <span className="text-xs text-slate-400">{tiles.length} {tiles.length === 1 ? 'Kachel' : 'Kacheln'}</span>
+          <div className="flex items-center gap-3">
+            {tiles.length > 0 && (
+              <button onClick={refreshAll} disabled={refreshing}
+                className="text-xs font-semibold text-slate-500 hover:text-brand disabled:opacity-40 transition flex items-center gap-1">
+                <span className={refreshing ? 'inline-block animate-spin' : ''}>⟳</span> {refreshing ? 'Aktualisiere …' : 'Aktualisieren'}
+              </button>
+            )}
+            <span className="text-xs text-slate-400">{tiles.length} {tiles.length === 1 ? 'Kachel' : 'Kacheln'}</span>
+          </div>
         </div>
         {tiles.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
@@ -129,9 +173,16 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tiles.map((t) => (
+            {tiles.map((t, i) => (
               <div key={t.id} className={t.span === 2 ? 'sm:col-span-2' : ''}>
-                <KpiTile result={t.result} viz={t.viz} onUnpin={() => unpin(t.id)} busy={busyId === t.id} />
+                <KpiTile
+                  result={t.result} viz={t.viz}
+                  onUnpin={() => unpin(t.id)}
+                  onMoveUp={i > 0 ? () => move(i, -1) : undefined}
+                  onMoveDown={i < tiles.length - 1 ? () => move(i, 1) : undefined}
+                  onToggleSpan={() => toggleSpan(t.id)}
+                  busy={busyId === t.id}
+                />
               </div>
             ))}
           </div>
