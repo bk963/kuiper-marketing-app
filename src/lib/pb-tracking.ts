@@ -121,6 +121,39 @@ export async function listTrackingRecords(collection: string, opts?: {
   }
 }
 
+/** Generisch: Record anlegen (für KPI-Tiles — pb-tracking-PB ist schreibfähig). */
+export async function createTrackingRecord(collection: string, body: Record<string, any>): Promise<{ record?: any; error?: string }> {
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records`, {
+      method: 'POST', headers: await authHeaders(), body: JSON.stringify(body),
+    });
+    if (!r.ok) return { error: `HTTP ${r.status}: ${(await r.text()).slice(0, 200)}` };
+    return { record: await r.json() };
+  } catch (e: any) { return { error: e?.message?.slice(0, 200) || 'create error' }; }
+}
+
+/** Generisch: Record patchen. */
+export async function patchTrackingRecord(collection: string, id: string, body: Record<string, any>): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records/${id}`, {
+      method: 'PATCH', headers: await authHeaders(), body: JSON.stringify(body),
+    });
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message?.slice(0, 200) || 'patch error' }; }
+}
+
+/** Generisch: Record löschen. */
+export async function deleteTrackingRecord(collection: string, id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(`${PB}/api/collections/${collection}/records/${id}`, {
+      method: 'DELETE', headers: await authHeaders(),
+    });
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message?.slice(0, 200) || 'delete error' }; }
+}
+
 /** Count-Helper — perPage=1 für totalItems ohne Datenload. */
 export async function countTrackingRecords(collection: string, filter?: string): Promise<number> {
   const params = new URLSearchParams({ perPage: '1', page: '1' });
