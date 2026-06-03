@@ -86,18 +86,20 @@ Konform zu [[feedback_drive_extraktion_dsgvo]] / Keine-Token-LLM-Regel.
 2. ✅ **Collection `mkt_kpi_tiles`** in **pb-tracking-PB** angelegt (Marketing-PB ist write-broken, s.u.).
 3. ✅ Coolify-Rebuild von `main`, DNS-Check vorab. Login-Fix per PB-Restart (s.u.).
 
-## 🔴 Incident: Marketing-PB korrupt (pb.kuiper-safety.de — shared mit LIVE-Blog)
+## ✅ Incident GELÖST (2026-06-03): Marketing-PB war korrupt
 
-`PRAGMA integrity_check` auf `/data/data.db` → **„database disk image is malformed (11)"**
-(kaputte btree-Pages Tree 164/169/10158). Folge: Reads ok (heile Pages), **Writes/DDL scheitern**.
-Das brach (a) den Admin-Login (auth-with-password 500 → per PB-Restart Read-Pfad wieder ok) und
-(b) Schema-/Record-Writes (400). Letzte echten Writes: blog_articles 15.04., _superuser 23.04.
-Korruptions-Backups vorhanden (`corrupt-2026-05-19/`, `data.db.bak-pre-did-fix-20260515`).
+`PRAGMA integrity_check` auf `/data/data.db` (pb.kuiper-safety.de, shared mit Live-Blog) →
+**„database disk image is malformed (11)"**. Folge: Reads ok, **Writes/DDL tot** → brach
+Admin-Login (auth 500) + Schema-/Record-Writes (400).
 
-**Deshalb:** Pin-Store läuft auf der gesunden **pb-tracking-PB** statt Marketing-PB.
-**Recovery (offen, gated):** `sqlite3 .recover` → neue DB + validieren + swap + PB-Restart,
-oder Restore aus gutem Backup. Betrifft Blog-CMS + Marketing-Writes. Session-Backup:
-`/root/pb-backups/data.db.*` auf PB-Host 46.225.159.70.
+**Recovery:** Offizielle `sqlite3` 3.47.2 (Ubuntu-Paket hat `dbpage`-Vtab wegkompiliert → eigenes
+static-Binary nötig) → `.recover` auf Kopie → `clean.db` `integrity_check=ok`, **alle Rowcounts
+identisch (kein Datenverlust)** → PB stop → `data.db` getauscht (korrupte als `data.db.corrupt-*`
+gesichert) → start. Verifiziert: DDL create(200)/delete(204), Login (303+Cookie), Blog (200),
+Live-`integrity_check=ok`. Backups: `/root/pb-backups/REAL-data.db.*` auf PB-Host 46.225.159.70.
+
+**⚠️ Wiederholung:** 3. Korruption (Mai 15/19 + Jun 3). Root-Cause offen → Disk-/Hardware-/
+PB-Health-Monitoring empfohlen. **Pin-Store bleibt auf pb-tracking-PB** (robuster).
 
 ## Cookie-Scope (wichtig)
 Auth-Cookie `ks_admin_session` ist **path=`/admin`** → API-Routen MÜSSEN unter `/admin/api/*`
