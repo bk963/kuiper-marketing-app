@@ -1,10 +1,10 @@
 /**
- * DELETE /api/admin/kpi/tiles/[id]   → unpin
- * PATCH  /api/admin/kpi/tiles/[id]    → reorder: Body { position }
+ * DELETE /admin/api/kpi/tiles/[id]   → unpin
+ * PATCH  /admin/api/kpi/tiles/[id]    → update: Body { position?, span? }
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
-import { unpinTile, reorderTile } from '@/lib/kpi/tiles';
+import { unpinTile, updateTile } from '@/lib/kpi/tiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,9 +22,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'invalid JSON' }, { status: 400 }); }
-  const position = Number(body.position);
-  if (!Number.isFinite(position)) return NextResponse.json({ error: 'position fehlt' }, { status: 400 });
-  const { ok, error } = await reorderTile(id, position);
-  if (!ok) return NextResponse.json({ error: error || 'reorder fehlgeschlagen' }, { status: 500 });
+  const fields: { position?: number; span?: number } = {};
+  if (Number.isFinite(Number(body.position))) fields.position = Number(body.position);
+  if (body.span === 1 || body.span === 2) fields.span = body.span;
+  if (!('position' in fields) && !('span' in fields)) return NextResponse.json({ error: 'position oder span nötig' }, { status: 400 });
+  const { ok, error } = await updateTile(id, fields);
+  if (!ok) return NextResponse.json({ error: error || 'update fehlgeschlagen' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
