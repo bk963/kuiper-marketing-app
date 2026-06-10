@@ -172,7 +172,7 @@ export default function BshForm({
       }
       const txt = await res.text().catch(() => '');
       console.warn('[lp-submit] failed', res.status, txt);
-      setErrorMsg('Sorry, das hat nicht geklappt. Bitte später nochmal versuchen oder direkt anrufen: +49 281 444 199 51');
+      setErrorMsg('Sorry, das hat nicht geklappt. Bitte später nochmal versuchen oder direkt anrufen: +49 281 444 199 50');
     } catch (err) {
       console.error('[lp-submit] error', err);
       try {
@@ -180,7 +180,7 @@ export default function BshForm({
           navigator.sendBeacon('/api/lp/lead/beacon', JSON.stringify(payload));
         }
       } catch { /* swallow */ }
-      setErrorMsg('Verbindungsfehler — bitte anrufen: +49 281 444 199 51');
+      setErrorMsg('Verbindungsfehler — bitte anrufen: +49 281 444 199 50');
     } finally {
       setSubmitting(false);
     }

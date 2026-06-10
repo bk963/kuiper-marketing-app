@@ -30,8 +30,8 @@ const DEFAULTS: Required<LpFrameConfig> = {
   ],
   logoSrc: '/brand/kuiper-logo-lp.png',
   logoHref: 'https://kuiper-safety.de/',
-  phoneNumber: '+4928144419951',
-  phoneDisplay: '+49 281 444 199 51',
+  phoneNumber: '+4928144419950',
+  phoneDisplay: '+49 281 444 199 50',
   ctaText: 'Jetzt Termin sichern',
   ctaHref: '#anfrage',
 };
