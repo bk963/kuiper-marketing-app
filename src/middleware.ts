@@ -39,6 +39,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next({ request: { headers: reqHeaders } });
   }
 
+  // Server-zu-Server: gültiges internes Token (CRM-Assistent „Timmy") → durchlassen
+  // ohne Admin-Cookie (für /admin/api/kpi/ask). Sonst normaler Cookie-Schutz.
+  const internalTok = process.env.MARKETING_INTERNAL_TOKEN;
+  if (internalTok && req.headers.get('x-internal-token') === internalTok) {
+    return NextResponse.next({ request: { headers: reqHeaders } });
+  }
+
   const c = req.cookies.get(COOKIE_NAME)?.value;
   if (!c) return NextResponse.redirect(new URL('/admin/login', req.url));
   try {
