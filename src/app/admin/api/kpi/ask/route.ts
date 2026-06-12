@@ -14,7 +14,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  try { await requireAdmin(); } catch { return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); }
+  // Server-zu-Server: internes Token (z.B. CRM-Assistent „Timmy") darf ohne Admin-Cookie
+  // anfragen. Sonst normaler Admin-Cookie-Schutz. (KPI-Brain läuft on-prem über GEX44.)
+  const internalTok = process.env.MARKETING_INTERNAL_TOKEN;
+  const internalOk = !!internalTok && req.headers.get('x-internal-token') === internalTok;
+  if (!internalOk) {
+    try { await requireAdmin(); } catch { return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); }
+  }
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'invalid JSON' }, { status: 400 }); }
