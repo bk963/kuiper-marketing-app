@@ -16,9 +16,17 @@ export const dynamic = 'force-dynamic';
 // Daily-Driver-KPIs — immer sichtbar, oben.
 const CORE: QuerySpec[] = [
   { metric: 'qualified_leads', days: 30, title: 'Qualifizierte Leads · 30T' },
-  { metric: 'cpa_qualified', days: 30, title: 'CPA pro qual. Lead · 30T' },
-  { metric: 'cost', days: 30, title: 'Ad-Spend · 30T' },
+  { metric: 'cpa_qualified', days: 30, title: 'CPL (qualifiziert) · 30T' },
+  { metric: 'leads', days: 30, title: 'Leads gesamt · 30T' },
   { metric: 'submit_to_qualified_rate', days: 30, title: 'Submit→Qualified · 30T' },
+];
+
+// Kanal-Vergleich Google ↔ Bing — Spend + CTR der letzten 7 Tage.
+const CHANNELS: QuerySpec[] = [
+  { metric: 'cost', channel: 'google', days: 7, title: 'Google-Spend · 7T' },
+  { metric: 'ctr', channel: 'google', days: 7, title: 'Google-CTR · 7T' },
+  { metric: 'cost', channel: 'bing', days: 7, title: 'Bing-Spend · 7T' },
+  { metric: 'ctr', channel: 'bing', days: 7, title: 'Bing-CTR · 7T' },
 ];
 
 export default async function AdminCockpit() {
@@ -26,8 +34,9 @@ export default async function AdminCockpit() {
 
   // Core-KPIs + gepinnte Kacheln + Connection-Checks parallel
   const tilesList = await listTiles();
-  const [core, pinnedResults, ga4, gsc, ads, blogTotal] = await Promise.all([
+  const [core, channels, pinnedResults, ga4, gsc, ads, blogTotal] = await Promise.all([
     Promise.all(CORE.map((s) => runQuery(s))),
+    Promise.all(CHANNELS.map((s) => runQuery(s))),
     Promise.all(tilesList.tiles.map((t) => runQuery(t.spec))),
     ga4Overview(7),
     gscSiteOverview(28),
@@ -48,8 +57,14 @@ export default async function AdminCockpit() {
       <p className="text-slate-600 mb-6">Deine Zahlen — live, fragbar, pinnbar.</p>
 
       {/* ── Core-KPIs ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {core.map((r, i) => <KpiTile key={i} result={r} viz="number" />)}
+      </div>
+
+      {/* ── Kanäle Google ↔ Bing ── */}
+      <div className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Kanäle · 7 Tage</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {channels.map((r, i) => <KpiTile key={i} result={r} viz="number" />)}
       </div>
 
       {/* ── Prompt + gepinntes Dashboard ── */}
