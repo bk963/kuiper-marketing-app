@@ -58,10 +58,21 @@ auf lebende Sektionen reduzierte Sidebar.
 - Geo: Köln=1 Lead, NRW-Kampagne cost 497,91€/44 Klk.
 - Production-Build (`next build`) erfolgreich.
 
-## Offen / nächster Track
-- **P7 Daten-Migration 2.0f** (blog/seo-intel/forms/leads/site/templates befüllen) —
-  separater Content-Ops-Track, nicht Teil des KPI-Boards, berührt die historisch
-  fragile Marketing-PB. Nicht erzwungen.
+## P7 — Content-Seiten an echte Daten (erledigt 2026-06-18)
+**Befund:** Die alte Marketing-PB `pb.kuiper-safety.de` (MPB_URL + BLOG_PB_URL) ist
+abgeschaltet/ohne DNS — Wurzel aller leeren Content-Seiten.
+**Lösung:** Daten-Layer auf die stabile **pb-tracking** umgebogen (pb-server.ts),
+13 `mkt_*`-Collections dort angelegt, echte Inhalte geseedet — keine Fake-Daten:
+- **Leads**: LIVE aus `marketing_lead_submissions` gemappt (mkt-forms.ts) — echte Daten+Datum, Test-Submissions gefiltert. (17 live)
+- **Site-Pages**: 5 echte Live-Seiten (BSH-LP, NRW-LP, Kontakt, Impressum, Datenschutz).
+- **Formulare**: 2 echte (BSH-LP-Formular, Kontaktformular).
+- **SEO-Keywords**: 50 echte GSC-Top-Queries (`gsc_keywords_seed.py`, Cron Mo 07:30).
+- **Blog + Rankings/Wettbewerber/Empfehlungen/Templates/Medien**: leer — keine
+  erreichbare Quelle (Blog-PB tot, blog.kuiper-safety.de ohne API). Backend lebt,
+  füllt sich sobald echter Content angelegt wird. Kein Platzhalter-Müll.
+Syncs: `/root/ads-analysis/mkt_collections_seed.py` + `gsc_keywords_seed.py`.
+
+## Offen / Hinweise
 - **Multi-Metrik „je Stadt"**: qwen setzt `dimension:city` nicht immer bei „je Stadt"
   (funktioniert bei „pro Stadt"). Minor.
 - **Bing conversion_value/roas**: Daily-Report liefert keinen Conv-Wert → roas=0.
