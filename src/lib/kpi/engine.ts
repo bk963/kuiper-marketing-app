@@ -13,15 +13,23 @@
  * die Spec — Daten kommen immer aus echten APIs.
  */
 import {
-  type QuerySpec, type KpiResult, type KpiMetric,
+  type QuerySpec, type KpiResult, type KpiMetric, type KpiChannel,
   DEFAULT_DAYS, METRIC_UNIT, METRIC_LABEL,
 } from './types';
 import { fetchLeads, aggregate, groupLeads, type LeadRow } from './leads';
 import {
   gadsMetricTotal, gadsMetricSeries, gadsMetricByCampaign, type GadsMetricKey,
 } from '@/lib/google-ads';
+import { bingMetricTotal, bingMetricSeries, bingMetricByCampaign } from '@/lib/bing-ads';
 import { ga4Overview } from '@/lib/ga4';
 import { gscSiteOverview } from '@/lib/gsc';
+
+/** Connector-Trio je Kanal — channel='bing' liest aus dem PB-Cache, sonst Google-Ads-API. */
+function adsConnectors(channel?: KpiChannel) {
+  return channel === 'bing'
+    ? { total: bingMetricTotal, series: bingMetricSeries, byCampaign: bingMetricByCampaign, source: 'bing-ads' as const }
+    : { total: gadsMetricTotal, series: gadsMetricSeries, byCampaign: gadsMetricByCampaign, source: 'google-ads' as const };
+}
 
 const LEAD_METRICS: KpiMetric[] = ['qualified_leads', 'leads', 'submit_to_qualified_rate', 'avg_quality_score', 'revenue', 'won_deals'];
 const ADS_METRICS: KpiMetric[] = ['cost', 'conversions', 'cpa', 'clicks', 'impressions', 'ctr', 'cpc', 'roas', 'conversion_value'];
@@ -78,14 +86,14 @@ async function scalarValue(metric: KpiMetric, fromISO: string, toISO: string, da
     }
     if (metric === 'cpa_qualified') {
       const [cost, lr] = await Promise.all([
-        gadsMetricTotal('cost', fromISO, toISO, spec.campaign),
+        adsConnectors(spec.channel).total('cost', fromISO, toISO, spec.campaign),
         fetchLeads(fromISO, toISO, { city: spec.city, channel: spec.channel, course: spec.course }),
       ]);
       const q = aggregate(lr.rows).qualified;
       return q > 0 && cost != null ? cost / q : null;
     }
     if (ADS_METRICS.includes(metric)) {
-      return await gadsMetricTotal(metric as GadsMetricKey, fromISO, toISO, spec.campaign);
+      return await adsConnectors(spec.channel).total(metric as GadsMetricKey, fromISO, toISO, spec.campaign);
     }
     return null; // GA4/GSC: kein Δ (kein Range-Support)
   } catch { return null; }
@@ -131,31 +139,33 @@ export async function runQuery(spec: QuerySpec): Promise<KpiResult> {
 
     // ── cpa_qualified ────────────────────────────────────────────────
     if (metric === 'cpa_qualified') {
+      const c = adsConnectors(spec.channel);
       const [cost, leadRes] = await Promise.all([
-        gadsMetricTotal('cost', fromISO, toISO, spec.campaign),
+        c.total('cost', fromISO, toISO, spec.campaign),
         fetchLeads(fromISO, toISO, { city: spec.city, channel: spec.channel, course: spec.course }),
       ]);
       const qualified = aggregate(leadRes.rows).qualified;
       const value = qualified > 0 && cost != null ? cost / qualified : null;
       const res: KpiResult = {
-        ...base, ok: cost != null, value, source: 'google-ads + pb-tracking',
+        ...base, ok: cost != null, value, source: `${c.source} + pb-tracking`,
         note: spec.city ? 'Spend ist konto-/kampagnenweit (Ads liefert keinen Stadt-Spend); Stadt filtert nur die Leads.' : undefined,
       } as KpiResult;
       if (!dim) await attachDelta(res, metric, fromISO, days, spec);
       return res;
     }
 
-    // ── Ads-Metriken ─────────────────────────────────────────────────
+    // ── Ads-Metriken (Google ODER Bing je nach spec.channel) ─────────
     if (ADS_METRICS.includes(metric)) {
       const gm = metric as GadsMetricKey;
+      const c = adsConnectors(spec.channel);
       const [value, series, breakdown] = await Promise.all([
-        gadsMetricTotal(gm, fromISO, toISO, spec.campaign),
-        gadsMetricSeries(gm, fromISO, toISO, spec.campaign),
-        dim === 'campaign' ? gadsMetricByCampaign(gm, fromISO, toISO) : Promise.resolve(undefined),
+        c.total(gm, fromISO, toISO, spec.campaign),
+        c.series(gm, fromISO, toISO, spec.campaign),
+        dim === 'campaign' ? c.byCampaign(gm, fromISO, toISO) : Promise.resolve(undefined),
       ]);
-      if (value == null) return { ...base, ok: false, value: null, source: 'google-ads', error: 'Google Ads nicht verbunden' } as KpiResult;
+      if (value == null) return { ...base, ok: false, value: null, source: c.source, error: c.source === 'bing-ads' ? 'Bing-Daten nicht verfügbar' : 'Google Ads nicht verbunden' } as KpiResult;
       const res: KpiResult = {
-        ...base, ok: true, value, series, breakdown, source: 'google-ads',
+        ...base, ok: true, value, series, breakdown, source: c.source,
         note: (spec.city && dim !== 'campaign') ? 'Stadt-Filter für Ads-Metriken nicht verfügbar (nur Leads haben Stadt).' : undefined,
       } as KpiResult;
       if (!dim) await attachDelta(res, metric, fromISO, days, spec);

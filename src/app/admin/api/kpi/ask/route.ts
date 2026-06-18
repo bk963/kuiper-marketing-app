@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
-import { questionToSpec } from '@/lib/kpi/prompt';
+import { questionToSpecs } from '@/lib/kpi/prompt';
 import { runQuery } from '@/lib/kpi/engine';
 
 export const runtime = 'nodejs';
@@ -27,9 +27,11 @@ export async function POST(req: NextRequest) {
   const question = String(body.question || '').trim();
   if (!question) return NextResponse.json({ error: 'Frage fehlt' }, { status: 400 });
 
-  const p = await questionToSpec(question);
-  if (!p.ok || !p.spec) return NextResponse.json({ error: p.error || 'Frage nicht verstanden', raw: p.raw }, { status: 422 });
+  const p = await questionToSpecs(question);
+  if (!p.ok || !p.specs?.length) return NextResponse.json({ error: p.error || 'Frage nicht verstanden', raw: p.raw }, { status: 422 });
 
-  const result = await runQuery(p.spec);
-  return NextResponse.json({ spec: p.spec, result });
+  // Alle Kennzahlen parallel auswerten. results[] = alle Kacheln,
+  // spec/result = erste (rückwärtskompatibel für CRM-Assistent „Timmy").
+  const results = await Promise.all(p.specs.map(async (spec) => ({ spec, result: await runQuery(spec) })));
+  return NextResponse.json({ spec: results[0].spec, result: results[0].result, results, raw: p.raw });
 }

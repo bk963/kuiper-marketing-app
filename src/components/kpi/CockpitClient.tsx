@@ -11,11 +11,11 @@ export interface RenderedTile {
 }
 
 const EXAMPLES = [
+  'Leads und Kosten pro Lead letzte 7 Tage',
+  'Klicks, CTR und Kosten bei Google diese Woche',
   'Qualifizierte Leads letzte 30 Tage',
   'Conversions letzte 30 Tage in Köln',
-  'Ad-Spend letzte 7 Tage bei Google',
   'Qualifizierte Leads je Stadt',
-  'Kosten pro qualifiziertem Lead in der NRW-Kampagne',
   'Lead-Verlauf der letzten 90 Tage',
 ];
 
@@ -23,8 +23,7 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
   const [q, setQ] = useState('');
   const [asking, setAsking] = useState(false);
   const [askErr, setAskErr] = useState<string | null>(null);
-  const [askResult, setAskResult] = useState<KpiResult | null>(null);
-  const [askSpec, setAskSpec] = useState<QuerySpec | null>(null);
+  const [askResults, setAskResults] = useState<{ spec: QuerySpec; result: KpiResult }[]>([]);
   const [tiles, setTiles] = useState<RenderedTile[]>(initialTiles);
   const [pinning, setPinning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -32,7 +31,7 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
   async function ask(question: string) {
     const text = question.trim();
     if (!text || asking) return;
-    setAsking(true); setAskErr(null); setAskResult(null); setAskSpec(null);
+    setAsking(true); setAskErr(null); setAskResults([]);
     try {
       const r = await fetch('/admin/api/kpi/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -40,24 +39,36 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
       });
       const d = await r.json();
       if (!r.ok) { setAskErr(d.error || 'Frage nicht verstanden.'); return; }
-      setAskResult(d.result); setAskSpec(d.spec);
+      // Multi-Metrik: results[] = alle Kacheln; Fallback auf Einzel (Alt-Format).
+      const list = Array.isArray(d.results) && d.results.length
+        ? d.results
+        : (d.result ? [{ spec: d.spec, result: d.result }] : []);
+      setAskResults(list);
     } catch { setAskErr('Verbindungsfehler.'); }
     finally { setAsking(false); }
   }
 
-  async function pin() {
-    if (!askSpec || !askResult || pinning) return;
+  /** Eine einzelne Kennzahl ins Dashboard pinnen. */
+  async function pinOne(spec: QuerySpec, result: KpiResult) {
+    const r = await fetch('/admin/api/kpi/tiles', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spec }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Pinnen fehlgeschlagen.');
+    setTiles((t) => [...t, { id: d.tile.id, viz: d.tile.viz || 'auto', span: d.tile.span || 1, result }]);
+  }
+
+  /** Alle aktuellen Ergebnisse pinnen (oder eines, wenn nur eines da ist). */
+  async function pinAll() {
+    if (!askResults.length || pinning) return;
     setPinning(true);
     try {
-      const r = await fetch('/admin/api/kpi/tiles', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spec: askSpec }),
-      });
-      const d = await r.json();
-      if (!r.ok) { setAskErr(d.error || 'Pinnen fehlgeschlagen.'); return; }
-      setTiles((t) => [...t, { id: d.tile.id, viz: d.tile.viz || 'auto', span: d.tile.span || 1, result: askResult }]);
-      setAskResult(null); setAskSpec(null); setQ('');
-    } catch { setAskErr('Pinnen fehlgeschlagen.'); }
+      for (const { spec, result } of askResults) {
+        if (result?.ok) await pinOne(spec, result);
+      }
+      setAskResults([]); setQ('');
+    } catch (e: any) { setAskErr(e?.message || 'Pinnen fehlgeschlagen.'); }
     finally { setPinning(false); }
   }
 
@@ -136,18 +147,21 @@ export default function CockpitClient({ initialTiles }: { initialTiles: Rendered
 
         {askErr && <div className="mt-3 text-sm text-rose-600">{askErr}</div>}
 
-        {askResult && (
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            <div><KpiTile result={askResult} /></div>
-            <div className="flex flex-col gap-2 pt-1">
+        {askResults.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="text-xs text-slate-500">
-                Verstanden als:&nbsp;
-                <code className="text-[11px] bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5">{JSON.stringify(askSpec)}</code>
+                {askResults.length === 1 ? 'Ergebnis' : `${askResults.length} Kennzahlen erkannt`}
               </div>
-              <button onClick={pin} disabled={pinning || !askResult.ok}
-                className="self-start px-4 py-2 rounded-xl bg-brand text-navy-dark font-bold hover:brightness-95 disabled:opacity-40 transition">
-                {pinning ? 'Pinne …' : '📌 Ins Dashboard'}
+              <button onClick={pinAll} disabled={pinning || !askResults.some((x) => x.result?.ok)}
+                className="px-4 py-2 rounded-xl bg-brand text-navy-dark font-bold hover:brightness-95 disabled:opacity-40 transition">
+                {pinning ? 'Pinne …' : askResults.length === 1 ? '📌 Ins Dashboard' : '📌 Alle ins Dashboard'}
               </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              {askResults.map((x, i) => (
+                <div key={i}><KpiTile result={x.result} /></div>
+              ))}
             </div>
           </div>
         )}
