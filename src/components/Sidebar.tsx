@@ -9,6 +9,9 @@ type NavItem = {
   active?: boolean;
 };
 
+// Nur Sektionen mit echten Live-Daten/-Funktionen. Noch nicht gebaute Module
+// (KI-Werkzeuge, E-Mail-Kampagnen/Automationen/Segmente, Alerts, Reports, Legacy-Content)
+// sind aus der Nav genommen — Routen-Dateien bleiben, nur ausgeblendet bis sie leben.
 const NAV: NavItem[] = [
   { href: '/admin', label: 'Übersicht', icon: '📊' },
 
@@ -26,24 +29,7 @@ const NAV: NavItem[] = [
   { href: '/admin/content/site', label: 'Site-Pages', icon: '🌐' },
   { href: '/admin/content/templates', label: 'Templates', icon: '📐' },
   { href: '/admin/content/forms', label: 'Formulare', icon: '📋' },
-  { href: '/admin/content/social', label: 'Social-Generator', icon: '🤖' },
   { href: '/admin/content/leads', label: 'Marketing-Leads', icon: '👥' },
-
-  { href: '#legacy-content', label: 'CONTENT (LEGACY)', icon: '', hub: true },
-  { href: '/admin/landingpages', label: 'Landingpages', icon: '🎨' },
-  { href: '/admin/lead-magnets', label: 'Lead-Magnete', icon: '📥' },
-  { href: '/admin/forms', label: 'Formulare (alt)', icon: '📋' },
-  { href: '/admin/emails', label: 'E-Mail-Templates (alt)', icon: '✉️' },
-
-  { href: '#ai', label: 'KI-WERKZEUGE', icon: '', hub: true },
-  { href: '/admin/ai/social', label: 'Social-Generator', icon: '🤖' },
-  { href: '/admin/ai/seo-recommend', label: 'SEO-Vorschläge', icon: '💡' },
-  { href: '/admin/ai/lp-gen', label: 'LP-Generator', icon: '✨' },
-
-  { href: '#campaigns', label: 'KAMPAGNEN', icon: '', hub: true },
-  { href: '/admin/campaigns', label: 'E-Mail-Kampagnen', icon: '📣' },
-  { href: '/admin/automations', label: 'Automationen', icon: '⚙️' },
-  { href: '/admin/segments', label: 'Segmente', icon: '🏷️' },
 
   { href: '#tracking', label: 'TRACKING', icon: '', hub: true },
   { href: '/admin/tracking/utm', label: 'UTM-Generator', icon: '🔗' },
@@ -52,8 +38,6 @@ const NAV: NavItem[] = [
 
   { href: '#admin', label: 'SYSTEM', icon: '', hub: true },
   { href: '/admin/integrations', label: 'Integrationen', icon: '🔌' },
-  { href: '/admin/alerts', label: 'Alerts', icon: '🔔' },
-  { href: '/admin/reports', label: 'Reports', icon: '📄' },
 ];
 
 export default function Sidebar({ pathname, email }: { pathname: string; email?: string }) {
