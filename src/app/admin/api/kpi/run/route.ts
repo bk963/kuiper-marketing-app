@@ -14,7 +14,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  try { await requireAdmin(); } catch { return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); }
+  // Server-zu-Server: internes Token (wie kpi/ask) darf ohne Admin-Cookie.
+  const internalTok = process.env.MARKETING_INTERNAL_TOKEN;
+  const internalOk = !!internalTok && req.headers.get('x-internal-token') === internalTok;
+  if (!internalOk) {
+    try { await requireAdmin(); } catch { return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); }
+  }
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'invalid JSON' }, { status: 400 }); }

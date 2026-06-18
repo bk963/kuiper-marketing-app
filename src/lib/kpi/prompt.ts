@@ -24,9 +24,16 @@ const CHANNELS: KpiChannel[] = ['google', 'bing', 'organic', 'direct', 'meta', '
 function systemPrompt(): string {
   const metricLines = METRICS.map((m) => `  "${m}" = ${METRIC_LABEL[m]}`).join('\n');
   return `Du bist der Query-Builder eines Marketing-KPI-Dashboards für ein deutsches Brandschutz-Unternehmen (Kuiper Safety, Brandschutzhelfer-Ausbildung).
-Wandle die Frage des Nutzers in EINE JSON-QuerySpec um. Antworte AUSSCHLIESSLICH mit gültigem JSON, kein Text drumherum.
+Wandle die Frage des Nutzers in KPI-Abfragen um. Antworte AUSSCHLIESSLICH mit einem JSON-Objekt der Form:
+{"queries": [ <eine Spec je Kennzahl> ]}
+kein Text drumherum.
 
-FELDER:
+ANZAHL KENNZAHLEN (WICHTIG):
+- "queries" ist IMMER ein Array.
+- EINE Kennzahl gefragt → genau EIN Objekt im Array.
+- MEHRERE Kennzahlen in einer Frage (z.B. „Leads und CPL", „Klicks, CTR und Kosten", „wie laufen Google und Bing") → MEHRERE Objekte, ein Objekt je Kennzahl. Gemeinsame Filter (Zeitraum, Stadt, Kanal, Kampagne) in JEDES Objekt kopieren.
+
+FELDER je Spec im Array:
 - metric (PFLICHT, einer dieser Werte):
 ${metricLines}
 - dimension (optional): ${DIMENSIONS.join(' | ')}   // Aufschlüsselung; "none" wenn eine einzelne Zahl gefragt ist
@@ -46,19 +53,25 @@ REGELN:
 
 BEISPIELE:
 Frage: "Wie hoch waren die Conversions der letzten 30 Tage in Köln?"
-JSON: {"metric":"conversions","city":"Köln","days":30,"title":"Conversions Köln · 30 Tage"}
+JSON: {"queries":[{"metric":"conversions","city":"Köln","days":30,"title":"Conversions Köln · 30 Tage"}]}
 
 Frage: "Qualifizierte Leads pro Stadt diesen Monat"
-JSON: {"metric":"qualified_leads","dimension":"city","days":30,"title":"Qualifizierte Leads je Stadt"}
+JSON: {"queries":[{"metric":"qualified_leads","dimension":"city","days":30,"title":"Qualifizierte Leads je Stadt"}]}
 
 Frage: "Was haben wir letzte Woche bei Google ausgegeben?"
-JSON: {"metric":"cost","channel":"google","days":7,"title":"Google-Spend · 7 Tage"}
-
-Frage: "Kosten pro qualifiziertem Lead in der NRW-Kampagne"
-JSON: {"metric":"cpa_qualified","campaign":"NRW","days":30,"title":"CPL qualifiziert · NRW"}
+JSON: {"queries":[{"metric":"cost","channel":"google","days":7,"title":"Google-Spend · 7 Tage"}]}
 
 Frage: "Lead-Verlauf der letzten 90 Tage"
-JSON: {"metric":"leads","dimension":"day","days":90,"title":"Lead-Verlauf · 90 Tage"}`;
+JSON: {"queries":[{"metric":"leads","dimension":"day","days":90,"title":"Lead-Verlauf · 90 Tage"}]}
+
+Frage: "Leads und Kosten pro Lead letzte 7 Tage"
+JSON: {"queries":[{"metric":"leads","days":7,"title":"Leads · 7 Tage"},{"metric":"cpa_qualified","days":7,"title":"CPL · 7 Tage"}]}
+
+Frage: "Klicks, CTR und Kosten bei Google diese Woche"
+JSON: {"queries":[{"metric":"clicks","channel":"google","days":7,"title":"Klicks · 7 Tage"},{"metric":"ctr","channel":"google","days":7,"title":"CTR · 7 Tage"},{"metric":"cost","channel":"google","days":7,"title":"Kosten · 7 Tage"}]}
+
+Frage: "Google vs Bing Kosten und Klicks diese Woche"
+JSON: {"queries":[{"metric":"cost","channel":"google","days":7,"title":"Google-Kosten · 7 Tage"},{"metric":"clicks","channel":"google","days":7,"title":"Google-Klicks · 7 Tage"},{"metric":"cost","channel":"bing","days":7,"title":"Bing-Kosten · 7 Tage"},{"metric":"clicks","channel":"bing","days":7,"title":"Bing-Klicks · 7 Tage"}]}`;
 }
 
 export interface PromptResult {
@@ -85,7 +98,18 @@ function sanitize(obj: any): QuerySpec | null {
   return spec;
 }
 
-export async function questionToSpec(question: string): Promise<PromptResult> {
+/** Max. Anzahl Kennzahlen pro Multi-Frage (verhindert Kachel-Flut). */
+const MAX_SPECS = 6;
+
+export interface PromptMultiResult {
+  ok: boolean;
+  specs?: QuerySpec[];
+  raw?: string;
+  error?: string;
+}
+
+/** Roh-Antwort von GEX44 holen (gemeinsamer Pfad für Single + Multi). */
+async function askGex44(question: string): Promise<{ ok: boolean; raw?: string; error?: string }> {
   const url = process.env.GEX44_URL || 'https://gex44.kuiper-safety.de';
   const user = process.env.GEX44_USER || '';
   const pass = process.env.GEX44_PASS || '';
@@ -111,13 +135,41 @@ export async function questionToSpec(question: string): Promise<PromptResult> {
     clearTimeout(t);
     if (!r.ok) return { ok: false, error: `GEX44 HTTP ${r.status}` };
     const d = await r.json();
-    const raw = String(d.response || '');
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { return { ok: false, raw, error: 'LLM-Antwort war kein gültiges JSON.' }; }
-    const spec = sanitize(parsed);
-    if (!spec) return { ok: false, raw, error: 'Frage nicht verstanden — bitte konkreter (z.B. „qualifizierte Leads in Köln letzte 30 Tage").' };
-    return { ok: true, spec, raw };
+    return { ok: true, raw: String(d.response || '') };
   } catch (e: any) {
     return { ok: false, error: e?.name === 'AbortError' ? 'GEX44 Timeout (30s)' : (e?.message?.slice(0, 160) || 'GEX44-Fehler') };
   }
+}
+
+/** Parst die LLM-Antwort zu einer oder mehreren Specs (Array, {queries:[]} oder Einzelobjekt). */
+function parseSpecs(parsed: any): QuerySpec[] {
+  const arr = Array.isArray(parsed) ? parsed
+    : Array.isArray(parsed?.queries) ? parsed.queries
+    : [parsed];
+  const specs: QuerySpec[] = [];
+  for (const o of arr) {
+    const s = sanitize(o);
+    if (s) specs.push(s);
+    if (specs.length >= MAX_SPECS) break;
+  }
+  return specs;
+}
+
+/** Multi-Metrik: NL-Frage → 1..n QuerySpecs. */
+export async function questionToSpecs(question: string): Promise<PromptMultiResult> {
+  const g = await askGex44(question);
+  if (!g.ok) return { ok: false, error: g.error };
+  const raw = g.raw || '';
+  let parsed: any;
+  try { parsed = JSON.parse(raw); } catch { return { ok: false, raw, error: 'LLM-Antwort war kein gültiges JSON.' }; }
+  const specs = parseSpecs(parsed);
+  if (!specs.length) return { ok: false, raw, error: 'Frage nicht verstanden — bitte konkreter (z.B. „qualifizierte Leads in Köln letzte 30 Tage").' };
+  return { ok: true, specs, raw };
+}
+
+/** Single-Metrik (Rückwärtskompatibel): gibt die erste Spec zurück. */
+export async function questionToSpec(question: string): Promise<PromptResult> {
+  const m = await questionToSpecs(question);
+  if (!m.ok || !m.specs?.length) return { ok: false, raw: m.raw, error: m.error };
+  return { ok: true, spec: m.specs[0], raw: m.raw };
 }
