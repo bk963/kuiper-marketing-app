@@ -9,12 +9,15 @@ import { pbHeaders } from './admin-auth';
 let _suToken: string | null = null;
 let _suExpires = 0;
 
-const PB = process.env.MPB_URL || 'https://pb.kuiper-safety.de';
+// Datenheimat der mkt_*-Collections: pb-tracking (stabil, schreibfähig).
+// Die alte Marketing-PB (pb.kuiper-safety.de) ist abgeschaltet/ohne DNS — siehe
+// docs/KPI-BOARD-KRASS.md. TRACKING_PB_URL hat Vorrang, MPB_URL nur als Alt-Fallback.
+const PB = process.env.TRACKING_PB_URL || process.env.MPB_URL || 'https://pb-tracking.kuiper-safety.de';
 
 async function getSuperuserToken(): Promise<string> {
   if (_suToken && Date.now() < _suExpires) return _suToken;
-  const email = process.env.PB_BLOG_EMAIL || process.env.PB_SUPERUSER_EMAIL || '';
-  const pass = process.env.PB_BLOG_PASS || process.env.PB_SUPERUSER_PASS || '';
+  const email = process.env.TRACKING_PB_SUPERUSER_EMAIL || process.env.PB_BLOG_EMAIL || process.env.PB_SUPERUSER_EMAIL || '';
+  const pass = process.env.TRACKING_PB_SUPERUSER_PASSWORD || process.env.PB_BLOG_PASS || process.env.PB_SUPERUSER_PASS || '';
   if (!email || !pass) return '';
   try {
     const r = await fetch(`${PB}/api/collections/_superusers/auth-with-password`, {
