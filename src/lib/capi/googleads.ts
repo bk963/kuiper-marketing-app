@@ -3,7 +3,7 @@
  *
  * Phase T4 (2026-05-30) — Tracking-Maximum-Sprint.
  *
- * Endpoint: https://googleads.googleapis.com/v20/customers/<CID>:uploadClickConversions
+ * Endpoint: https://googleads.googleapis.com/v25/customers/<CID>:uploadClickConversions
  * Doku: https://developers.google.com/google-ads/api/docs/conversions/upload-clicks
  *
  * Voraussetzung: gclid muss im Lead persistiert sein (sonst kein OCI möglich).
@@ -73,7 +73,7 @@ export async function fireGoogleAds(lead: LeadForCapi): Promise<CapiResult> {
   };
 
   try {
-    const res = await fetch(`https://googleads.googleapis.com/v20/customers/${cid}:uploadClickConversions`, {
+    const res = await fetch(`https://googleads.googleapis.com/v25/customers/${cid}:uploadClickConversions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
