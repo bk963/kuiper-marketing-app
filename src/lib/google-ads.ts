@@ -55,7 +55,7 @@ export async function gadsAccountSummary(days = 7) {
         metrics.conversions,
         metrics.conversions_value
       FROM customer
-      WHERE segments.date DURING LAST_${days}_DAYS
+      WHERE ${dateClause(...lastNDays(days))}
     `);
     const r = rows[0] || ({} as any);
     const cost = Number(r.metrics?.cost_micros || 0) / 1_000_000;
@@ -111,6 +111,14 @@ function addRow(a: any, m: any) {
   return a;
 }
 const dateClause = (from: string, to: string) => `segments.date BETWEEN '${from}' AND '${to}'`;
+// Google Ads kennt als DURING-Literal nur LAST_7/14/30_DAYS — NICHT z.B. LAST_28_DAYS.
+// Für beliebige Tagesfenster expliziten Datumsbereich (YYYY-MM-DD) berechnen.
+const lastNDays = (days: number): [string, string] => {
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const to = new Date();
+  const from = new Date(to.getTime() - (days - 1) * 86400000);
+  return [iso(from), iso(to)];
+};
 
 /** Einzelwert einer Ads-Metrik über das Konto im Zeitraum [from,to] (optional 1 Kampagne). */
 export async function gadsMetricTotal(metric: GadsMetricKey, fromISO: string, toISO: string, campaignContains?: string): Promise<number | null> {
@@ -177,7 +185,7 @@ export async function gadsCampaigns(days = 7, limit = 20) {
         metrics.conversions,
         metrics.conversions_value
       FROM campaign
-      WHERE segments.date DURING LAST_${days}_DAYS
+      WHERE ${dateClause(...lastNDays(days))}
         AND campaign.status != 'REMOVED'
       ORDER BY metrics.cost_micros DESC
       LIMIT ${limit}
