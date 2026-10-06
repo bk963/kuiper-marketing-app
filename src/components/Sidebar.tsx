@@ -22,14 +22,12 @@ const NAV: NavItem[] = [
   { href: '/admin/conversions', label: 'Conversions', icon: '💰' },
 
   { href: '#content-hub', label: 'CONTENT-HUB', icon: '', hub: true },
-  { href: '/admin/content/blog', label: 'Blog', icon: '📰' },
+  // Leere/nicht-migrierte Seiten 2026-10-06 ausgeblendet (Blog→blog.kuiper-safety.de,
+  // Landingpages/Bausteine/Templates/Marketing-Leads: 0 Daten / Collection fehlt).
+  // Wieder einblenden, sobald befüllt.
   { href: '/admin/content/seo-intel', label: 'SEO-Intel', icon: '🎯' },
-  { href: '/admin/content/landingpages', label: 'Landingpages', icon: '🎨' },
-  { href: '/admin/content/landingpages/bausteine', label: 'Bausteine', icon: '🧩' },
   { href: '/admin/content/site', label: 'Site-Pages', icon: '🌐' },
-  { href: '/admin/content/templates', label: 'Templates', icon: '📐' },
   { href: '/admin/content/forms', label: 'Formulare', icon: '📋' },
-  { href: '/admin/content/leads', label: 'Marketing-Leads', icon: '👥' },
 
   { href: '#tracking', label: 'TRACKING', icon: '', hub: true },
   { href: '/admin/tracking/utm', label: 'UTM-Generator', icon: '🔗' },
