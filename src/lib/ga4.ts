@@ -168,3 +168,123 @@ export async function ga4Countries(days = 7, limit = 10) {
     }));
   } catch { return []; }
 }
+
+/* ── Phase 2: Tiefen-Dimensionen ─────────────────────────────────────── */
+const _range = (days: number) => [{ startDate: `${days}daysAgo`, endDate: 'today' }];
+
+/** Quelle/Medium: woher kommt der Traffic (sessionSourceMedium). */
+export async function ga4SourceMedium(days = 7, limit = 20) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'sessionSourceMedium' }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'conversions' }, { name: 'engagementRate' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit,
+    });
+    return (resp.rows || []).map((r) => ({
+      sourceMedium: r.dimensionValues?.[0]?.value || '(not set)',
+      sessions: Number(r.metricValues?.[0]?.value || 0),
+      users: Number(r.metricValues?.[1]?.value || 0),
+      conversions: Number(r.metricValues?.[2]?.value || 0),
+      engagementRate: Number(r.metricValues?.[3]?.value || 0),
+    }));
+  } catch { return []; }
+}
+
+/** Landingpages: Einstiegsseiten mit Conversions/Bounce. */
+export async function ga4LandingPages(days = 7, limit = 25) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'landingPagePlusQueryString' }],
+      metrics: [{ name: 'sessions' }, { name: 'conversions' }, { name: 'bounceRate' }, { name: 'averageSessionDuration' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit,
+    });
+    return (resp.rows || []).map((r) => ({
+      landing: r.dimensionValues?.[0]?.value || '(not set)',
+      sessions: Number(r.metricValues?.[0]?.value || 0),
+      conversions: Number(r.metricValues?.[1]?.value || 0),
+      bounceRate: Number(r.metricValues?.[2]?.value || 0),
+      avgDuration: Number(r.metricValues?.[3]?.value || 0),
+    }));
+  } catch { return []; }
+}
+
+/** Top-Events (eventName → eventCount), inkl. Key-Event-Markierung. */
+export async function ga4Events(days = 7, limit = 25) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'eventName' }, { name: 'isKeyEvent' }],
+      metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
+      orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }], limit,
+    });
+    return (resp.rows || []).map((r) => ({
+      event: r.dimensionValues?.[0]?.value || '',
+      keyEvent: (r.dimensionValues?.[1]?.value || '').toLowerCase() === 'true',
+      count: Number(r.metricValues?.[0]?.value || 0),
+      users: Number(r.metricValues?.[1]?.value || 0),
+    }));
+  } catch { return []; }
+}
+
+/** Neu vs. Wiederkehrend. */
+export async function ga4NewReturning(days = 7) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'newVsReturning' }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+    });
+    return (resp.rows || []).map((r) => ({
+      type: r.dimensionValues?.[0]?.value || '(unknown)',
+      sessions: Number(r.metricValues?.[0]?.value || 0),
+      users: Number(r.metricValues?.[1]?.value || 0),
+    }));
+  } catch { return []; }
+}
+
+/** Top-Städte. */
+export async function ga4Cities(days = 7, limit = 15) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'city' }],
+      metrics: [{ name: 'sessions' }, { name: 'conversions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit,
+    });
+    return (resp.rows || []).map((r) => ({
+      city: r.dimensionValues?.[0]?.value || '(not set)',
+      sessions: Number(r.metricValues?.[0]?.value || 0),
+      conversions: Number(r.metricValues?.[1]?.value || 0),
+    }));
+  } catch { return []; }
+}
+
+/** Browser-Verteilung. */
+export async function ga4Browsers(days = 7, limit = 10) {
+  const client = getGa4Client(); const property = getPropertyName();
+  if (!client || !property) return null;
+  try {
+    const [resp] = await client.runReport({
+      property, dateRanges: _range(days),
+      dimensions: [{ name: 'browser' }],
+      metrics: [{ name: 'sessions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit,
+    });
+    return (resp.rows || []).map((r) => ({
+      browser: r.dimensionValues?.[0]?.value || 'unknown',
+      sessions: Number(r.metricValues?.[0]?.value || 0),
+    }));
+  } catch { return []; }
+}
