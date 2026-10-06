@@ -103,3 +103,78 @@ export async function gscTopPages(days = 28, limit = 50) {
     }));
   } catch { return []; }
 }
+
+/* ── Phase 3: SEO-Tiefe ──────────────────────────────────────────────── */
+// GSC-Zeitraum (2 Tage Lag); offsetDays verschiebt den Bereich nach hinten (für Vorperioden-Vergleich).
+function gscDates(days: number, offsetDays = 0) {
+  const end = new Date(Date.now() - (2 + offsetDays) * 86400_000).toISOString().slice(0, 10);
+  const start = new Date(Date.now() - (2 + offsetDays + days) * 86400_000).toISOString().slice(0, 10);
+  return { start, end };
+}
+
+export async function gscByCountry(days = 28, limit = 15) {
+  const gsc = getClient(); if (!gsc) return [];
+  const { start, end } = gscDates(days);
+  try {
+    const resp = await gsc.searchanalytics.query({
+      siteUrl: SITE, requestBody: { startDate: start, endDate: end, dimensions: ['country'], rowLimit: limit },
+    });
+    return (resp.data.rows || []).map((r: any) => ({
+      country: (r.keys?.[0] || '').toUpperCase(),
+      clicks: r.clicks || 0, impressions: r.impressions || 0, ctr: r.ctr || 0, position: r.position || 0,
+    }));
+  } catch { return []; }
+}
+
+export async function gscByDevice(days = 28) {
+  const gsc = getClient(); if (!gsc) return [];
+  const { start, end } = gscDates(days);
+  try {
+    const resp = await gsc.searchanalytics.query({
+      siteUrl: SITE, requestBody: { startDate: start, endDate: end, dimensions: ['device'], rowLimit: 5 },
+    });
+    return (resp.data.rows || []).map((r: any) => ({
+      device: r.keys?.[0] || '', clicks: r.clicks || 0, impressions: r.impressions || 0, ctr: r.ctr || 0, position: r.position || 0,
+    }));
+  } catch { return []; }
+}
+
+/** Query×Seite: welche Seite rankt für welche Suche (konkrete Optimierungs-Paare). */
+export async function gscQueryPage(days = 28, limit = 50) {
+  const gsc = getClient(); if (!gsc) return [];
+  const { start, end } = gscDates(days);
+  try {
+    const resp = await gsc.searchanalytics.query({
+      siteUrl: SITE, requestBody: { startDate: start, endDate: end, dimensions: ['query', 'page'], rowLimit: limit },
+    });
+    return (resp.data.rows || []).map((r: any) => ({
+      query: r.keys?.[0] || '', page: r.keys?.[1] || '',
+      clicks: r.clicks || 0, impressions: r.impressions || 0, ctr: r.ctr || 0, position: r.position || 0,
+    }));
+  } catch { return []; }
+}
+
+/** Gewinner/Verlierer: Queries mit größter Klick-Veränderung ggü. Vorperiode (gleiche Länge). */
+export async function gscMovers(days = 28, limit = 12) {
+  const gsc = getClient(); if (!gsc) return { gainers: [], losers: [] };
+  const cur = gscDates(days);
+  const prev = gscDates(days, days);
+  try {
+    const q = (s: string, e: string) => gsc.searchanalytics.query({
+      siteUrl: SITE, requestBody: { startDate: s, endDate: e, dimensions: ['query'], rowLimit: 1000 },
+    });
+    const [rc, rp] = await Promise.all([q(cur.start, cur.end), q(prev.start, prev.end)]);
+    const prevMap = new Map<string, any>();
+    for (const r of (rp.data.rows || [])) prevMap.set(r.keys?.[0] || '', r);
+    const merged = (rc.data.rows || []).map((r: any) => {
+      const k = r.keys?.[0] || ''; const p = prevMap.get(k);
+      return {
+        query: k, clicks: r.clicks || 0, prevClicks: p?.clicks || 0, deltaClicks: (r.clicks || 0) - (p?.clicks || 0),
+        position: r.position || 0, prevPosition: p?.position || 0, deltaPosition: (p?.position || 0) - (r.position || 0), // positiv = besser (kleinere Position)
+      };
+    });
+    const gainers = [...merged].sort((a, b) => b.deltaClicks - a.deltaClicks).slice(0, limit).filter((x) => x.deltaClicks > 0);
+    const losers = [...merged].sort((a, b) => a.deltaClicks - b.deltaClicks).slice(0, limit).filter((x) => x.deltaClicks < 0);
+    return { gainers, losers };
+  } catch { return { gainers: [], losers: [] }; }
+}

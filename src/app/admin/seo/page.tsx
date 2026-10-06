@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/admin-auth';
-import { gscSiteOverview, gscTopQueries, gscTopPages } from '@/lib/gsc';
+import { gscSiteOverview, gscTopQueries, gscTopPages, gscByCountry, gscByDevice, gscQueryPage, gscMovers } from '@/lib/gsc';
 import { blogRankings, blogKeywords } from '@/lib/blog-data';
 import StatCard from '@/components/StatCard';
 import ConnectionStatus from '@/components/ConnectionStatus';
@@ -16,13 +16,28 @@ export default async function SeoPage({ searchParams }: { searchParams: Promise<
   await requireAdmin();
   const sp = await searchParams;
   const { days, label, key } = resolveRange(sp);
-  const [ov, queries, pages, rankings, keywords] = await Promise.all([
+  const [ov, queries, pages, rankings, keywords, queryPage, byCountry, byDevice, movers] = await Promise.all([
     gscSiteOverview(days),
-    gscTopQueries(days, 50),
+    gscTopQueries(days, 100),
     gscTopPages(days, 25),
     blogRankings(50),
     blogKeywords(100),
+    gscQueryPage(days, 60),
+    gscByCountry(days, 12),
+    gscByDevice(days),
+    gscMovers(days, 12),
   ]);
+
+  // Positions-Verteilung aus den Top-Queries (clientseitig aggregiert)
+  const buckets = [
+    { label: 'Top 3 (1–3)', min: 0, max: 3 },
+    { label: 'Seite 1 (4–10)', min: 3, max: 10 },
+    { label: 'Seite 2 (11–20)', min: 10, max: 20 },
+    { label: 'Dahinter (21+)', min: 20, max: 9999 },
+  ].map((b) => {
+    const qs = (queries || []).filter((q: any) => q.position > b.min && q.position <= b.max);
+    return { label: b.label, count: qs.length, clicks: qs.reduce((a: number, q: any) => a + q.clicks, 0) };
+  });
 
   const gscOk = !!ov;
   const blogPbOk = rankings.length > 0 || keywords.length > 0;
@@ -94,6 +109,107 @@ export default async function SeoPage({ searchParams }: { searchParams: Promise<
           ) : <Empty />}
         </Card>
       </div>
+
+      {gscOk && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+            <Card title="Positions-Verteilung">
+              <Table headers={['Bereich', 'Queries', 'Klicks']}>
+                {buckets.map((b, i) => (
+                  <tr key={i} className="border-t hover:bg-slate-50">
+                    <td className="px-3 py-2">{b.label}</td>
+                    <td className="px-3 py-2 text-right font-mono">{num(b.count)}</td>
+                    <td className="px-3 py-2 text-right font-mono">{num(b.clicks)}</td>
+                  </tr>
+                ))}
+              </Table>
+            </Card>
+            <Card title="Nach Land">
+              {byCountry.length > 0 ? (
+                <div className="max-h-72 overflow-y-auto">
+                  <Table headers={['Land', 'Klicks', 'Impr.', 'Pos.']}>
+                    {byCountry.map((c, i) => (
+                      <tr key={i} className="border-t hover:bg-slate-50">
+                        <td className="px-3 py-2">{c.country}</td>
+                        <td className="px-3 py-2 text-right font-mono">{num(c.clicks)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{num(c.impressions)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{pos(c.position)}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              ) : <Empty />}
+            </Card>
+            <Card title="Nach Gerät">
+              {byDevice.length > 0 ? (
+                <Table headers={['Gerät', 'Klicks', 'CTR', 'Pos.']}>
+                  {byDevice.map((d, i) => (
+                    <tr key={i} className="border-t hover:bg-slate-50">
+                      <td className="px-3 py-2 capitalize">{d.device.toLowerCase()}</td>
+                      <td className="px-3 py-2 text-right font-mono">{num(d.clicks)}</td>
+                      <td className="px-3 py-2 text-right font-mono">{pct(d.ctr)}</td>
+                      <td className="px-3 py-2 text-right font-mono">{pos(d.position)}</td>
+                    </tr>
+                  ))}
+                </Table>
+              ) : <Empty />}
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+            <Card title="📈 Gewinner (vs. Vorperiode)">
+              {movers.gainers.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto">
+                  <Table headers={['Query', 'Klicks', 'Δ Klicks', 'Pos.']}>
+                    {movers.gainers.map((m, i) => (
+                      <tr key={i} className="border-t hover:bg-slate-50">
+                        <td className="px-3 py-2 max-w-xs truncate">{m.query}</td>
+                        <td className="px-3 py-2 text-right font-mono">{num(m.clicks)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-emerald-600">+{num(m.deltaClicks)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{pos(m.position)}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              ) : <Empty />}
+            </Card>
+            <Card title="📉 Verlierer (vs. Vorperiode)">
+              {movers.losers.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto">
+                  <Table headers={['Query', 'Klicks', 'Δ Klicks', 'Pos.']}>
+                    {movers.losers.map((m, i) => (
+                      <tr key={i} className="border-t hover:bg-slate-50">
+                        <td className="px-3 py-2 max-w-xs truncate">{m.query}</td>
+                        <td className="px-3 py-2 text-right font-mono">{num(m.clicks)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-rose-600">{num(m.deltaClicks)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{pos(m.position)}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              ) : <Empty />}
+            </Card>
+          </div>
+
+          <Card title="Query × Seite (welche Seite rankt für welche Suche)" className="mb-8">
+            {queryPage.length > 0 ? (
+              <div className="max-h-96 overflow-y-auto">
+                <Table headers={['Query', 'Seite', 'Klicks', 'Impr.', 'Pos.']}>
+                  {queryPage.map((r, i) => (
+                    <tr key={i} className="border-t hover:bg-slate-50">
+                      <td className="px-3 py-2 max-w-[14rem] truncate">{r.query}</td>
+                      <td className="px-3 py-2 max-w-[16rem] truncate font-mono text-xs">{r.page.replace('https://', '')}</td>
+                      <td className="px-3 py-2 text-right font-mono">{num(r.clicks)}</td>
+                      <td className="px-3 py-2 text-right font-mono">{num(r.impressions)}</td>
+                      <td className="px-3 py-2 text-right font-mono">{pos(r.position)}</td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+            ) : <Empty />}
+          </Card>
+        </>
+      )}
 
       <Card title="Blog-Keywords (aus blog_keywords)" className="mb-8">
         {keywords.length > 0 ? (
