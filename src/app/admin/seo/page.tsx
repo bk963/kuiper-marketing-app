@@ -3,6 +3,8 @@ import { gscSiteOverview, gscTopQueries, gscTopPages } from '@/lib/gsc';
 import { blogRankings, blogKeywords } from '@/lib/blog-data';
 import StatCard from '@/components/StatCard';
 import ConnectionStatus from '@/components/ConnectionStatus';
+import RangePicker from '@/components/RangePicker';
+import { resolveRange } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +12,14 @@ function num(n: number) { return n.toLocaleString('de-DE'); }
 function pct(n: number, d = 1) { return (n * 100).toFixed(d) + '%'; }
 function pos(n: number) { return n.toFixed(1); }
 
-export default async function SeoPage() {
+export default async function SeoPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireAdmin();
+  const sp = await searchParams;
+  const { days, label, key } = resolveRange(sp);
   const [ov, queries, pages, rankings, keywords] = await Promise.all([
-    gscSiteOverview(28),
-    gscTopQueries(28, 50),
-    gscTopPages(28, 25),
+    gscSiteOverview(days),
+    gscTopQueries(days, 50),
+    gscTopPages(days, 25),
     blogRankings(50),
     blogKeywords(100),
   ]);
@@ -26,7 +30,9 @@ export default async function SeoPage() {
   return (
     <div className="max-w-7xl">
       <h1 className="text-3xl font-extrabold mb-2">🔍 SEO</h1>
-      <p className="text-slate-600 mb-6">Google Search Console + Blog-Ranking-Daten (kuiper-safety.de + brandschutzdozenten.de Transfer).</p>
+      <p className="text-slate-600 mb-4">Google Search Console + Blog-Ranking-Daten (kuiper-safety.de + brandschutzdozenten.de Transfer).</p>
+
+      <RangePicker current={key} />
 
       <ConnectionStatus checks={[
         { name: 'GSC', connected: gscOk, hint: 'Service-Account als Limited User in GSC-Property hinzufügen' },
@@ -35,8 +41,8 @@ export default async function SeoPage() {
 
       {gscOk && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Klicks · 28T" value={num(ov!.total.clicks)} />
-          <StatCard label="Impressionen · 28T" value={num(ov!.total.impressions)} />
+          <StatCard label={`Klicks · ${label}`} value={num(ov!.total.clicks)} />
+          <StatCard label={`Impressionen · ${label}`} value={num(ov!.total.impressions)} />
           <StatCard label="CTR" value={pct(ov!.total.clicks / Math.max(ov!.total.impressions, 1))} />
           <StatCard label="Ø Position" value={pos(ov!.total.position)} />
         </div>
@@ -54,7 +60,7 @@ export default async function SeoPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-        <Card title="Top Queries (GSC, 28T)">
+        <Card title={`Top Queries (GSC, ${label})`}>
           {queries && queries.length > 0 ? (
             <div className="max-h-96 overflow-y-auto">
               <Table headers={['Query', 'Klicks', 'Impr.', 'CTR', 'Pos.']}>
@@ -72,7 +78,7 @@ export default async function SeoPage() {
           ) : <Empty />}
         </Card>
 
-        <Card title="Top Pages (GSC, 28T)">
+        <Card title={`Top Pages (GSC, ${label})`}>
           {pages && pages.length > 0 ? (
             <div className="max-h-96 overflow-y-auto">
               <Table headers={['Page', 'Klicks', 'Pos.']}>

@@ -2,6 +2,8 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { ga4Overview, ga4Channels, ga4TopPages, ga4Devices, ga4Countries } from '@/lib/ga4';
 import StatCard from '@/components/StatCard';
 import ConnectionStatus from '@/components/ConnectionStatus';
+import RangePicker from '@/components/RangePicker';
+import { resolveRange } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +11,16 @@ function num(n: number) { return n.toLocaleString('de-DE'); }
 function pct(n: number, d = 1) { return (n * 100).toFixed(d) + '%'; }
 function dur(s: number) { return s < 60 ? `${s.toFixed(0)}s` : `${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`; }
 
-export default async function TrafficPage() {
+export default async function TrafficPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireAdmin();
+  const sp = await searchParams;
+  const { days, label, key } = resolveRange(sp);
   const [ov, channels, pages, devices, countries] = await Promise.all([
-    ga4Overview(28),
-    ga4Channels(28),
-    ga4TopPages(28, 25),
-    ga4Devices(28),
-    ga4Countries(28, 10),
+    ga4Overview(days),
+    ga4Channels(days),
+    ga4TopPages(days, 25),
+    ga4Devices(days),
+    ga4Countries(days, 10),
   ]);
 
   const connected = !!ov;
@@ -24,7 +28,9 @@ export default async function TrafficPage() {
   return (
     <div className="max-w-7xl">
       <h1 className="text-3xl font-extrabold mb-2">📈 Traffic</h1>
-      <p className="text-slate-600 mb-6">GA4-Daten letzte 28 Tage über alle Properties (kuiper-safety.de + Subdomains).</p>
+      <p className="text-slate-600 mb-4">GA4-Daten über alle Properties (kuiper-safety.de + Subdomains).</p>
+
+      <RangePicker current={key} />
 
       <ConnectionStatus checks={[{ name: 'GA4 Data API', connected, hint: 'GA4_PROPERTY_ID + GOOGLE_SERVICE_ACCOUNT_JSON in env setzen' }]} />
 
@@ -44,7 +50,7 @@ export default async function TrafficPage() {
       {connected && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Sessions" value={num(ov!.total.sessions)} hint="letzte 28 T" />
+            <StatCard label="Sessions" value={num(ov!.total.sessions)} hint={label} />
             <StatCard label="Nutzer" value={num(ov!.total.users)} />
             <StatCard label="Pageviews" value={num(ov!.total.pageviews)} />
             <StatCard label="Engagement-Rate" value={pct(ov!.total.engagementRate)} />
