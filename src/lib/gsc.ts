@@ -112,6 +112,24 @@ function gscDates(days: number, offsetDays = 0) {
   return { start, end };
 }
 
+/** Unsere echten Rankings aus GSC als Map keyword(lowercase)→Position. Für Gegencheck gegen DataForSEO-"Lücken". */
+export async function gscRankedQueries(days = 90, limit = 2000): Promise<Map<string, number>> {
+  const gsc = getClient();
+  const m = new Map<string, number>();
+  if (!gsc) return m;
+  const { start, end } = gscDates(days);
+  try {
+    const resp = await gsc.searchanalytics.query({
+      siteUrl: SITE, requestBody: { startDate: start, endDate: end, dimensions: ['query'], rowLimit: limit },
+    });
+    for (const r of (resp.data.rows || [])) {
+      const q = (r.keys?.[0] || '').toLowerCase();
+      if (q) m.set(q, r.position || 999);
+    }
+  } catch { /* leer */ }
+  return m;
+}
+
 export async function gscByCountry(days = 28, limit = 15) {
   const gsc = getClient(); if (!gsc) return [];
   const { start, end } = gscDates(days);

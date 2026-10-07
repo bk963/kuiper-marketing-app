@@ -3,6 +3,8 @@
  * ENV: DATAFORSEO_LOGIN, DATAFORSEO_PASSWORD.
  * Keyword-Gap wird client-seitig aus ranked_keywords berechnet (robuster als domain_intersection).
  */
+import { gscRankedQueries } from '@/lib/gsc';
+
 const BASE = 'https://api.dataforseo.com/v3';
 const LOC = { language_name: 'German', location_name: 'Germany' };
 
@@ -64,16 +66,20 @@ export async function dfsRankedKeywords(domain: string, limit = 50): Promise<{ d
 
 /** Keyword-Gap: Keywords, für die der Wettbewerber rankt, wir aber NICHT (oder deutlich schlechter). */
 export async function dfsKeywordGap(ourDomain: string, competitor: string, limit = 50): Promise<{ data: (DfsKw & { ourPosition: number | null })[]; error?: string }> {
-  const [comp, ours] = await Promise.all([
+  const [comp, ours, gscMap] = await Promise.all([
     dfsRankedKeywords(competitor, 300),
     dfsRankedKeywords(ourDomain, 700),
+    gscRankedQueries(90, 2000), // GSC-Gegencheck: unsere ECHTEN Rankings
   ]);
   if (comp.error) return { data: [], error: comp.error };
   const ourMap = new Map<string, number>();
   for (const k of ours.data) ourMap.set(k.keyword.toLowerCase(), k.position);
+  // GSC überschreibt DataForSEO für die eigene Domain (verlässlicher) → verhindert False-Positive-Lücken
+  // für Keywords, für die wir laut Search Console längst ranken.
+  for (const [q, pos] of gscMap) ourMap.set(q, pos);
   const gap = comp.data
     .map((k) => ({ ...k, ourPosition: ourMap.get(k.keyword.toLowerCase()) ?? null }))
-    // Gap = Wettbewerber in Top 20, wir nicht da ODER >10 Positionen schlechter
+    // Echte Lücke: Wettbewerber in Top 20 UND wir ranken gar nicht ODER >10 Positionen schlechter
     .filter((k) => k.position <= 20 && (k.ourPosition === null || k.ourPosition - k.position >= 10))
     .sort((a, b) => b.volume - a.volume)
     .slice(0, limit);
