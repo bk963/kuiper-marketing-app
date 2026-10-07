@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import TodoActions from '@/components/TodoActions';
 
 const IMP: Record<string, string> = { hoch: 'bg-rose-100 text-rose-800', mittel: 'bg-amber-100 text-amber-800', gering: 'bg-slate-100 text-slate-700' };
 
@@ -49,7 +50,8 @@ export default function CompetitorAnalysis({ domains }: { domains: string }) {
                     <span className={`text-xs px-2 py-0.5 rounded-full ${IMP[m.impact] || 'bg-slate-100 text-slate-700'}`}>Impact: {m.impact}</span>
                     <span className="text-xs text-slate-500">Aufwand: {m.aufwand}</span>
                   </div>
-                  <p className="text-sm text-slate-700">{m.action}</p>
+                  <p className="text-sm text-slate-700 mb-2">{m.action}</p>
+                  <TodoActions todo={{ title: m.title, category: 'Wettbewerb', action: m.action, impact: m.impact, effort: m.aufwand, source: 'analyse' }} />
                 </div>
               ))}
             </div>
