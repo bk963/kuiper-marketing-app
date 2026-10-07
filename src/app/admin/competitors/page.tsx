@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/admin-auth';
 import { dfsOverview, dfsRankedKeywords, dfsKeywordGap } from '@/lib/dataforseo';
 import CompetitorForm from '@/components/CompetitorForm';
+import CompetitorAnalysis from '@/components/CompetitorAnalysis';
 import StatCard from '@/components/StatCard';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,8 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
       <p className="text-slate-600 mb-4">Wettbewerbs-Analyse via DataForSEO: geschätzter Organic-Traffic, Keyword-Lücken (sie ranken, wir nicht) & Top-Keywords. Eigene Domain: <b>{OUR}</b>.</p>
 
       <CompetitorForm current={competitors.join(', ')} />
+
+      <CompetitorAnalysis domains={competitors.join(',')} />
 
       {ourOv.error && <div className="p-4 rounded-xl border bg-amber-50 border-amber-200 text-sm text-amber-900 mb-6">DataForSEO: {ourOv.error}{ourOv.error.includes('40104') || ourOv.error.includes('verify') ? ' — Konto-Limits propagieren direkt nach Verifizierung noch (kurz warten).' : ''}</div>}
 

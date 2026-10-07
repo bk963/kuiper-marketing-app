@@ -8,29 +8,7 @@ import { gscSiteOverview, gscMovers, gscQueryPage } from '@/lib/gsc';
 import { gadsAccountSummary, gadsCampaigns } from '@/lib/google-ads';
 import { clarityInsights } from '@/lib/clarity';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
-
-async function askGex44(prompt: string): Promise<{ ok: boolean; raw?: string; error?: string }> {
-  const url = process.env.GEX44_URL || 'https://gex44.kuiper-safety.de';
-  const user = process.env.GEX44_USER || '';
-  const pass = process.env.GEX44_PASS || '';
-  // Brain nutzt bewusst das schnellere 14b (32b braucht beim großen Prompt >180s).
-  const model = process.env.GEX44_BRAIN_MODEL || 'qwen2.5:14b';
-  if (!user || !pass) return { ok: false, error: 'GEX44-Zugang nicht konfiguriert' };
-  const auth = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
-  try {
-    const r = await fetch(`${url}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: auth },
-      body: JSON.stringify({ model, format: 'json', stream: false, prompt, options: { temperature: 0.3, num_ctx: 8192 } }),
-      signal: AbortSignal.timeout(240000),
-    });
-    if (!r.ok) return { ok: false, error: `GEX44 HTTP ${r.status}` };
-    const d = await r.json();
-    return { ok: true, raw: d.response || '' };
-  } catch (e: any) {
-    return { ok: false, error: e?.message?.slice(0, 160) || 'GEX44-Fehler' };
-  }
-}
+import { askGex44 } from '@/lib/gex44';
 
 export async function collectSignals(days = 28) {
   const [ov, topPages, srcMedium, channels, gsc, movers, qp, ads, camps, clarity] = await Promise.all([
