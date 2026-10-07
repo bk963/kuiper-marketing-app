@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { href: '/admin/ads', label: 'Ads', icon: '🎯' },
   { href: '/admin/conversions', label: 'Conversions', icon: '💰' },
   { href: '/admin/clarity', label: 'Verhalten (Clarity)', icon: '🖱️' },
+  { href: '/admin/competitors', label: 'Wettbewerb', icon: '🥊' },
 
   { href: '#content-hub', label: 'CONTENT-HUB', icon: '', hub: true },
   // Leere/nicht-migrierte Seiten 2026-10-06 ausgeblendet (Blog→blog.kuiper-safety.de,
