@@ -9,18 +9,19 @@ import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 
-// Money-/Ziel-Keywords (Kuiper = Brandschutz-Schulungen & -Dienstleistungen, B2B DE).
+// Money-/Ziel-Keywords — Kuiper-Ziel: 100% Dominanz externe SiFa + externer BSB,
+// done-for-you, Fokus Pflegeeinrichtungen & Pflegedienste. (NICHT generische Kurse.)
 const SEED_KEYWORDS = [
-  'brandschutzhelfer ausbildung',
-  'brandschutzhelfer schulung',
-  'brandschutzbeauftragter ausbildung',
-  'brandschutzbeauftragter fortbildung',
-  'evakuierungshelfer ausbildung',
-  'brandschutzunterweisung',
-  'brandschutzordnung erstellen',
-  'räumungsübung',
-  'brandschutzhelfer schulung online',
-  'brandschutz schulung firma',
+  'externe sifa pflege',
+  'externe sicherheitsfachkraft pflegeeinrichtung',
+  'externer brandschutzbeauftragter pflegeheim',
+  'externer brandschutzbeauftragter pflegedienst',
+  'fachkraft für arbeitssicherheit pflege',
+  'gefährdungsbeurteilung pflegeeinrichtung',
+  'arbeitssicherheit pflegedienst',
+  'externe sicherheitsfachkraft',
+  'externer brandschutzbeauftragter',
+  'brandschutzbeauftragter extern kosten',
 ];
 
 // Keine echten Schulungs-Wettbewerber (Portale/Social/Verzeichnisse/Shops) — werden markiert.
@@ -63,7 +64,7 @@ export async function runCompetitorIntel(): Promise<{ ok: boolean; id?: string; 
 
   // GEX44-Analyse: echte Wettbewerber (ohne generic) + unsere Positionen
   const realComp = leaderboard.filter((l) => !l.generic).slice(0, 10);
-  const prompt = `Du bist SEO-/Marketing-Stratege für Kuiper Safety Systems (Brandschutz-Schulungen & -Dienstleistungen, B2B, Deutschland).
+  const prompt = `Du bist SEO-/Marketing-Stratege für Kuiper Safety Systems. ZIEL: Marktführerschaft als **externe SiFa (Fachkraft für Arbeitssicherheit)** + **externer Brandschutzbeauftragter (BSB)** als Done-for-you-Dienstleistung — Fokus **Pflegeeinrichtungen & Pflegedienste** (wiederkehrende Verträge, nicht einmalige Kurse). B2B, Deutschland.
 Hier die SERP-Analyse unserer Money-Keywords: wer rankt (Wettbewerber-Leaderboard) und wo WIR stehen (our = unsere Position, null = nicht in Top 15).
 Erkenne die Lage, konkrete Chancen und priorisierte Maßnahmen. claim-safe, datenbezogen, ehrlich.
 Antworte NUR als JSON:

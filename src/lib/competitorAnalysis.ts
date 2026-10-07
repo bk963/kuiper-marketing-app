@@ -38,7 +38,7 @@ export async function analyzeCompetition(competitors: string[]): Promise<{ ok: b
     wettbewerber: compData,
   };
 
-  const prompt = `Du bist Senior-SEO-/Marketing-Stratege für Kuiper Safety Systems (Brandschutz-Schulungen & -Dienstleistungen, B2B, Deutschland).
+  const prompt = `Du bist Senior-SEO-/Marketing-Stratege für Kuiper Safety Systems. ZIEL: Marktführerschaft als externe SiFa + externer Brandschutzbeauftragter (done-for-you), Fokus Pflegeeinrichtungen & Pflegedienste. B2B, Deutschland.
 Analysiere die SEO-/Markt-Daten (geschätzter Organic-Traffic/Monat, Keyword-Anzahl, Top-3-Rankings, Top-Keywords, Keyword-Lücken wo Wettbewerber ranken und wir nicht).
 Sei konkret, datenbezogen, ehrlich (auch wenn wir schwächer sind). claim-safe (keine Garantie-/Heilsversprechen).
 Antworte NUR als JSON:
