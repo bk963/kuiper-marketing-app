@@ -1,8 +1,12 @@
 import { requireAdmin } from '@/lib/admin-auth';
 import { dfsOverview, dfsRankedKeywords, dfsKeywordGap } from '@/lib/dataforseo';
+import { latestIntel } from '@/lib/competitorIntel';
 import CompetitorForm from '@/components/CompetitorForm';
 import CompetitorAnalysis from '@/components/CompetitorAnalysis';
+import TodoActions from '@/components/TodoActions';
 import StatCard from '@/components/StatCard';
+
+const IMP: Record<string, string> = { hoch: 'bg-rose-100 text-rose-800', mittel: 'bg-amber-100 text-amber-800', gering: 'bg-slate-100 text-slate-700' };
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +18,11 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const domainsRaw = (Array.isArray(sp.domains) ? sp.domains[0] : sp.domains) || '';
   const competitors = domainsRaw.split(',').map((d) => d.trim()).filter(Boolean).slice(0, 4);
+
+  const intel = await latestIntel();
+  const ib = Array.isArray(intel?.leaderboard) ? intel.leaderboard : [];
+  const iserps = Array.isArray(intel?.serps) ? intel.serps : [];
+  const ianalysis = intel?.analysis || null;
 
   const ourOv = await dfsOverview(OUR);
   const compData = await Promise.all(competitors.map(async (c) => ({
@@ -28,6 +37,83 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
       <h1 className="text-3xl font-extrabold mb-2">🥊 Wettbewerb</h1>
       <p className="text-slate-600 mb-4">Wettbewerbs-Analyse via DataForSEO: geschätzter Organic-Traffic, Keyword-Lücken (sie ranken, wir nicht) & Top-Keywords. Eigene Domain: <b>{OUR}</b>.</p>
 
+      {/* ===== Automatische Wettbewerbs-Suche (SERP-Discovery) ===== */}
+      <div className="bg-white rounded-xl border p-5 mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+          <h2 className="text-lg font-bold text-slate-900">🔎 Automatische Wettbewerbs-Suche</h2>
+          <span className="text-xs text-slate-400">{intel?.generated_at ? `zuletzt: ${new Date(intel.generated_at).toLocaleString('de-DE')}` : 'läuft täglich'}</span>
+        </div>
+        <p className="text-sm text-slate-600 mb-4">Durchsucht die Google-SERPs unserer Money-Keywords und entdeckt, <b>wer wofür rankt</b> — plus Chancen &amp; Maßnahmen. Aktualisiert täglich automatisch.</p>
+
+        {!intel && <div className="p-6 text-center text-slate-500 text-sm bg-slate-50 rounded-lg">Noch keine Suche gelaufen – der tägliche Job füllt das in Kürze (oder ich stoße ihn einmalig an).</div>}
+
+        {intel && (
+          <>
+            {ianalysis?.lage && <div className="mb-5 text-slate-800 leading-relaxed"><span className="text-xs uppercase tracking-wide text-slate-400 font-semibold block mb-1">Lage</span>{ianalysis.lage}</div>}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+              <Card title={`Wettbewerber-Leaderboard (wer rankt für unsere Keywords)`}>
+                <div className="max-h-96 overflow-y-auto">
+                  <Table headers={['Domain', 'Keywords', 'Ø Pos', 'Best', 'Typ']}>
+                    {ib.map((l: any, i: number) => (
+                      <tr key={i} className="border-t hover:bg-slate-50">
+                        <td className="px-3 py-2">{l.domain}</td>
+                        <td className="px-3 py-2 text-right font-mono">{l.appearances}</td>
+                        <td className="px-3 py-2 text-right font-mono">{l.avgPosition}</td>
+                        <td className="px-3 py-2 text-right font-mono">{l.bestPosition}</td>
+                        <td className="px-3 py-2 text-right text-xs">{l.generic ? <span className="text-slate-400">Portal</span> : <span className="text-emerald-700 font-semibold">direkt</span>}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              </Card>
+
+              <Card title="Wer rankt für welches Keyword (Top 3 + unsere Position)">
+                <div className="max-h-96 overflow-y-auto">
+                  <Table headers={['Keyword', 'Top 3', 'Wir']}>
+                    {iserps.map((s: any, i: number) => (
+                      <tr key={i} className="border-t hover:bg-slate-50 align-top">
+                        <td className="px-3 py-2">{s.keyword}</td>
+                        <td className="px-3 py-2 text-xs text-slate-600">{(s.top || []).slice(0, 3).map((t: any) => `${t.position}. ${t.domain}`).join(' · ')}</td>
+                        <td className="px-3 py-2 text-right font-mono">{s.our ? <span className="text-emerald-700">Pos {s.our}</span> : <span className="text-rose-600">—</span>}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                </div>
+              </Card>
+            </div>
+
+            {Array.isArray(ianalysis?.chancen) && ianalysis.chancen.length > 0 && (
+              <div className="mb-4">
+                <span className="text-xs uppercase tracking-wide text-slate-400 font-semibold">🎯 Chancen</span>
+                <ul className="list-disc list-inside text-sm text-slate-700 mt-1 space-y-1">{ianalysis.chancen.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+              </div>
+            )}
+
+            {Array.isArray(ianalysis?.massnahmen) && ianalysis.massnahmen.length > 0 && (
+              <div>
+                <span className="text-xs uppercase tracking-wide text-slate-400 font-semibold">✅ Empfohlene Maßnahmen</span>
+                <div className="space-y-2 mt-2">
+                  {ianalysis.massnahmen.map((m: any, i: number) => (
+                    <div key={i} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-semibold text-slate-900">{m.title}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${IMP[m.impact] || 'bg-slate-100 text-slate-700'}`}>Impact: {m.impact}</span>
+                        <span className="text-xs text-slate-500">Aufwand: {m.aufwand}</span>
+                      </div>
+                      <p className="text-sm text-slate-700 mb-2">{m.action}</p>
+                      <TodoActions todo={{ title: m.title, category: 'Wettbewerb', action: m.action, impact: m.impact, effort: m.aufwand, source: 'wettbewerb-intel' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-900 mb-1">Einzel-Domain-Deep-Dive</h2>
+      <p className="text-sm text-slate-600 mb-3">Eine bestimmte Domain tiefer analysieren (Traffic, Keyword-Lücken, Top-Keywords):</p>
       <CompetitorForm current={competitors.join(', ')} />
 
       <CompetitorAnalysis domains={competitors.join(',')} />

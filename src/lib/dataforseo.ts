@@ -64,6 +64,19 @@ export async function dfsRankedKeywords(domain: string, limit = 50): Promise<{ d
   return { data };
 }
 
+export type SerpRow = { domain: string; position: number; url: string; title: string };
+
+/** Live-SERP für ein Keyword: wer rankt (organisch). Für Wettbewerber-Discovery. */
+export async function dfsSerp(keyword: string, depth = 15): Promise<{ data: SerpRow[]; error?: string }> {
+  const { result, error } = await dfs('serp/google/organic/live/advanced', { keyword, depth });
+  if (!result) return { data: [], error };
+  const items = result[0]?.items || [];
+  const data: SerpRow[] = items
+    .filter((i: any) => i.type === 'organic')
+    .map((i: any) => ({ domain: (i.domain || '').replace(/^www\./, ''), position: i.rank_absolute || 0, url: i.url || '', title: i.title || '' }));
+  return { data };
+}
+
 /** Keyword-Gap: Keywords, für die der Wettbewerber rankt, wir aber NICHT (oder deutlich schlechter). */
 export async function dfsKeywordGap(ourDomain: string, competitor: string, limit = 50): Promise<{ data: (DfsKw & { ourPosition: number | null })[]; error?: string }> {
   const [comp, ours, gscMap] = await Promise.all([
