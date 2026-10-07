@@ -33,8 +33,10 @@ export async function runCompetitorIntel(): Promise<{ ok: boolean; id?: string; 
   const serps: IntelSerp[] = [];
   const agg = new Map<string, { positions: number[]; keywords: Set<string> }>();
 
-  for (const kw of SEED_KEYWORDS) {
-    const { data } = await dfsSerp(kw, 15);
+  // SERP-Calls parallel (je ~24s) → zusammen ~24s statt 240s sequenziell.
+  const results = await Promise.all(SEED_KEYWORDS.map(async (kw) => ({ kw, data: (await dfsSerp(kw, 15)).data })));
+
+  for (const { kw, data } of results) {
     if (!data.length) continue;
     let our: number | null = null;
     const top: { domain: string; position: number }[] = [];
