@@ -64,13 +64,15 @@ Analysiere die Marketing-Signale und liefere die wichtigsten, KONKRETEN Handlung
 Regeln: claim-safe (keine Heils-/Garantieversprechen, Haftung nur als Risiko), DE, umsetzbar, nach echtem Geschäftsimpact priorisiert (Leads/Umsatz, nicht nur Klicks).
 
 WICHTIGER GUARDRAIL (SEO): In seoOpportunities steht pro Keyword ein "standing".
-- standing="rankt_bereits_gut" (Position ≤ 8): Die Seite rankt bereits stark. NIEMALS "Seite neu schreiben" oder "neuen Inhalt erstellen" empfehlen — das riskiert ein bestehendes Ranking. Erlaubt sind nur: Feinschliff (Title/Meta/Snippet), interne Verlinkung, FAQ/Schema ergänzen, Ranking VERTEIDIGEN.
-- standing="striking_distance" (Position 9–20): Hier lohnt Ausbau/neue Inhalte/gezielte Optimierung Richtung Top-3.
-Formuliere SEO-To-dos entsprechend; verwechsle "schon stark" nicht mit "Lücke".
+- standing="rankt_bereits_gut" (Position ≤ 8): Die Seite rankt bereits stark. NIEMALS "Seite neu schreiben"/"neuen Inhalt erstellen" empfehlen — das riskiert ein bestehendes Ranking. Mach daraus KEIN eigenes To-do pro Keyword; solche Begriffe höchstens in EINEM gebündelten "Top-Rankings halten"-To-do erwähnen, und nur wenn es eine konkrete Aktion gibt.
+- standing="striking_distance" (Position 9–20): ECHTER Hebel — Ausbau/gezielte Optimierung Richtung Top-3.
+Verwechsle "schon stark" nicht mit "Lücke". Fokussiere To-dos auf echte Hebel: striking_distance-Keywords, Content für Pflegeeinrichtungen/-dienste, Ads-Effizienz (CPA/Budget), Friction-Fixes.
+
+QUALITÄT: Jedes To-do EINDEUTIG — KEINE Wiederholungen/Varianten desselben Themas, nicht künstlich auffüllen. Lieber 3–6 starke, distinkte To-dos als 10 schwache.
 
 Antworte NUR als JSON (kein Markdown, keine Code-Fences):
 {"summary":"2-4 Sätze Gesamtlage","todos":[{"title":"kurz","category":"SEO|Content|Ads|UX|Branding","why":"datenbasierte Begründung","action":"konkreter nächster Schritt","priority":1,"impact":"hoch|mittel|gering","effort":"low|med|high"}]}
-Maximal 10 To-dos, wichtigstes zuerst. priority 1=höchste. impact = erwarteter Geschäftsimpact (Leads/Umsatz).`;
+3–8 To-dos, wichtigstes zuerst, keine Dubletten. priority 1=höchste. impact = erwarteter Geschäftsimpact (Leads/Umsatz).`;
 
 /** Tolerantes JSON-Parsing für LLM-Antworten: entfernt Code-Fences und extrahiert das
  *  äußerste {…}-Objekt. Gibt null zurück, wenn gar nichts Brauchbares drin ist. */
@@ -93,7 +95,14 @@ export async function runBrain(days = 28): Promise<{ ok: boolean; report?: any; 
   if (!g.ok) return { ok: false, error: g.error };
   const parsed = parseLlmJson(g.raw);
   if (!parsed) return { ok: false, error: 'GEX44-Antwort kein valides JSON' };
-  const todos = Array.isArray(parsed.todos) ? parsed.todos.slice(0, 12) : [];
+  // Dedup: Modell neigt dazu, auf die Zielzahl mit Varianten desselben Themas aufzufüllen.
+  // Normalisiere Titel (Klammerzusätze/Interpunktion/Case raus) und behalte je Thema nur das erste.
+  const seen = new Set<string>();
+  const todos = (Array.isArray(parsed.todos) ? parsed.todos : []).filter((t: any) => {
+    const key = String(t?.title || '').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-zäöüß0-9]+/g, ' ').trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 10);
   const summary = String(parsed.summary || '').slice(0, 1500);
   const report_date = new Date().toISOString().slice(0, 10);
   const rec = await createTrackingRecord('mkt_brain_reports', {
