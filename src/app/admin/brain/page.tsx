@@ -7,9 +7,15 @@ import TodoActions from '@/components/TodoActions';
 export const dynamic = 'force-dynamic';
 
 const STATUS: Record<string, string> = {
-  beauftragt: 'bg-sky-100 text-sky-800', in_arbeit: 'bg-amber-100 text-amber-800',
+  beauftragt: 'bg-sky-100 text-sky-800', in_arbeit: 'bg-amber-100 text-amber-800 animate-pulse',
+  wartet_freigabe: 'bg-violet-100 text-violet-800', fehler: 'bg-rose-100 text-rose-800',
   erledigt: 'bg-emerald-100 text-emerald-800', verworfen: 'bg-slate-100 text-slate-500',
 };
+const STATUS_LABEL: Record<string, string> = {
+  beauftragt: '⏳ beauftragt', in_arbeit: '⚙️ in Arbeit', wartet_freigabe: '🔶 wartet auf Freigabe',
+  fehler: '⚠️ Fehler', erledigt: '✅ erledigt', verworfen: 'verworfen',
+};
+const LOGDOT: Record<string, string> = { change: 'bg-cyan-500', error: 'bg-rose-500', info: 'bg-slate-300' };
 
 const CAT: Record<string, string> = {
   SEO: 'bg-sky-100 text-sky-800 border-sky-200',
@@ -42,6 +48,12 @@ export default async function BrainPage() {
   const todos = Array.isArray(rep?.todos) ? [...rep.todos].sort((a: any, b: any) => (a.priority || 9) - (b.priority || 9)) : [];
   const tasksRes = await listTrackingRecords('mkt_brain_tasks', { sort: '-created', perPage: 50 });
   const tasks = ((tasksRes as any)?.items || []).filter((t: any) => t.status !== 'verworfen');
+  // Aktivitäts-Log je Task (was/wann/wo der Worter autonom geändert hat)
+  let logsByTask: Record<string, any[]> = {};
+  try {
+    const logRes = await listTrackingRecords('mkt_brain_task_log', { sort: 'created', perPage: 300 });
+    for (const l of ((logRes as any)?.items || [])) { (logsByTask[l.task_id] ||= []).push(l); }
+  } catch { /* Log-Collection evtl. noch leer */ }
   const sig: any = rep?.signals || {};
   const seoOpps: any[] = Array.isArray(sig.seoOpportunities) ? sig.seoOpportunities : [];
 
@@ -77,18 +89,42 @@ export default async function BrainPage() {
 
           {tasks.length > 0 && (
             <div className="mb-6">
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3">🤝 An Claude beauftragt ({tasks.length})</h2>
-              <div className="bg-white rounded-xl border divide-y">
-                {tasks.map((t: any) => (
-                  <div key={t.id} className="p-3 flex items-start gap-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${STATUS[t.status] || 'bg-slate-100 text-slate-600'}`}>{t.status}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-900">{t.title}</div>
-                      {t.result && <div className="text-xs text-slate-600 mt-0.5">Ergebnis: {t.result}</div>}
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-1">🤝 An Claude beauftragt ({tasks.length})</h2>
+              <p className="text-xs text-slate-400 mb-3">Der Worker nimmt beauftragte Aufgaben automatisch auf, arbeitet sie ab (reversibel autonom · öffentlich/teuer → wartet auf Freigabe) und protokolliert jede Änderung — wann, wo, was.</p>
+              <div className="space-y-3">
+                {tasks.map((t: any) => {
+                  const logs = logsByTask[t.id] || [];
+                  return (
+                  <div key={t.id} className="bg-white rounded-xl border p-4">
+                    <div className="flex items-start gap-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-semibold ${STATUS[t.status] || 'bg-slate-100 text-slate-600'}`}>{STATUS_LABEL[t.status] || t.status}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-900">{t.title}</div>
+                        {t.result && <div className="text-xs text-slate-600 mt-1 leading-relaxed"><span className="text-slate-400">Ergebnis:</span> {t.result}</div>}
+                      </div>
+                      <span className="text-xs text-slate-400 shrink-0">{(t.created || '').slice(0, 10)}</span>
                     </div>
-                    <span className="text-xs text-slate-400 shrink-0">{(t.created || '').slice(0, 10)}</span>
+                    {logs.length > 0 && (
+                      <details className="mt-3 group">
+                        <summary className="text-xs text-slate-500 cursor-pointer select-none hover:text-slate-700">🧾 Aktivitäts-Log ({logs.length}) — was wann wo geändert wurde</summary>
+                        <ol className="mt-2 ml-1 border-l border-slate-200 pl-4 space-y-2">
+                          {logs.map((l: any) => (
+                            <li key={l.id} className="relative text-xs">
+                              <span className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full ${LOGDOT[l.level] || 'bg-slate-300'}`} />
+                              <span className="text-slate-400 tabular-nums">{(l.created || '').slice(0, 16).replace('T', ' ')}</span>
+                              <span className="mx-1.5 text-slate-400">·</span>
+                              <span className="font-medium text-slate-700">{l.actor}</span>
+                              <span className="mx-1 text-slate-300">›</span>
+                              <span className="text-slate-600">{l.action}</span>
+                              {l.detail && <div className="text-slate-500 mt-0.5">{l.detail}</div>}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
