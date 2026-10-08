@@ -26,7 +26,13 @@ const SEED_KEYWORDS = [
 ];
 
 // Keine echten Schulungs-Wettbewerber (Portale/Social/Verzeichnisse/Shops) — werden markiert.
-const GENERIC = new Set(['youtube.com', 'wikipedia.org', 'facebook.com', 'google.com', 'amazon.de', 'linkedin.com', 'instagram.com', 'xing.com', 'indeed.com', 'stepstone.de', 'wlw.de', '11880.com', 'gelbeseiten.de', 'dguv.de', 'bgn.de']);
+const GENERIC = new Set([
+  // Social/Portale/Verzeichnisse/Shops/Jobs
+  'youtube.com', 'wikipedia.org', 'facebook.com', 'google.com', 'amazon.de', 'linkedin.com', 'instagram.com', 'xing.com',
+  'indeed.com', 'stepstone.de', 'wlw.de', '11880.com', 'gelbeseiten.de', 'studysmarter.de', 'talents.studysmarter.de',
+  // Behörden / Berufsgenossenschaften / Unfallkassen — ranken stark, sind aber KEINE kommerziellen Wettbewerber
+  'dguv.de', 'bgn.de', 'baua.de', 'komnet.nrw.de', 'bgw-online.de', 'bghw.de', 'bgrci.de', 'vbg.de', 'arbeitsschutz.nrw.de',
+]);
 
 export type IntelLeader = { domain: string; appearances: number; avgPosition: number; bestPosition: number; keywords: string[]; generic: boolean };
 export type IntelSerp = { keyword: string; our: number | null; top: { domain: string; position: number }[] };
