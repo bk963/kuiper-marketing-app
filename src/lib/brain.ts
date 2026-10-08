@@ -9,6 +9,7 @@ import { gadsAccountSummary, gadsCampaigns } from '@/lib/google-ads';
 import { clarityInsights } from '@/lib/clarity';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
 import { askGex44 } from '@/lib/gex44';
+import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 
 export async function collectSignals(days = 28) {
   const [ov, topPages, srcMedium, channels, gsc, movers, qp, ads, camps, clarity] = await Promise.all([
@@ -74,20 +75,6 @@ Antworte NUR als JSON (kein Markdown, keine Code-Fences):
 {"summary":"2-4 Sätze Gesamtlage","todos":[{"title":"kurz","category":"SEO|Content|Ads|UX|Branding","why":"datenbasierte Begründung","action":"konkreter nächster Schritt","priority":1,"impact":"hoch|mittel|gering","effort":"low|med|high"}]}
 3–8 To-dos, wichtigstes zuerst, keine Dubletten. priority 1=höchste. impact = erwarteter Geschäftsimpact (Leads/Umsatz).`;
 
-/** Tolerantes JSON-Parsing für LLM-Antworten: entfernt Code-Fences und extrahiert das
- *  äußerste {…}-Objekt. Gibt null zurück, wenn gar nichts Brauchbares drin ist. */
-function parseLlmJson(raw?: string): any | null {
-  if (!raw) return null;
-  let s = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  try { return JSON.parse(s); } catch { /* weiter */ }
-  const start = s.indexOf('{');
-  const end = s.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try { return JSON.parse(s.slice(start, end + 1)); } catch { /* */ }
-  }
-  return null;
-}
-
 export async function runBrain(days = 28): Promise<{ ok: boolean; report?: any; error?: string }> {
   const signals = await collectSignals(days);
   const prompt = `${SYS}\n\nSIGNALE (letzte ${days} Tage):\n${JSON.stringify(signals)}`;
@@ -95,14 +82,8 @@ export async function runBrain(days = 28): Promise<{ ok: boolean; report?: any; 
   if (!g.ok) return { ok: false, error: g.error };
   const parsed = parseLlmJson(g.raw);
   if (!parsed) return { ok: false, error: 'GEX44-Antwort kein valides JSON' };
-  // Dedup: Modell neigt dazu, auf die Zielzahl mit Varianten desselben Themas aufzufüllen.
-  // Normalisiere Titel (Klammerzusätze/Interpunktion/Case raus) und behalte je Thema nur das erste.
-  const seen = new Set<string>();
-  const todos = (Array.isArray(parsed.todos) ? parsed.todos : []).filter((t: any) => {
-    const key = String(t?.title || '').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-zäöüß0-9]+/g, ' ').trim();
-    if (!key || seen.has(key)) return false;
-    seen.add(key); return true;
-  }).slice(0, 10);
+  // Dedup: Modell füllt sonst auf die Zielzahl mit Varianten desselben Themas auf.
+  const todos = dedupeByTitle(Array.isArray(parsed.todos) ? parsed.todos : [], 'title', 10);
   const summary = String(parsed.summary || '').slice(0, 1500);
   const report_date = new Date().toISOString().slice(0, 10);
   const rec = await createTrackingRecord('mkt_brain_reports', {

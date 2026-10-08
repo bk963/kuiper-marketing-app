@@ -5,6 +5,7 @@
  */
 import { dfsSerp } from '@/lib/dataforseo';
 import { askGex44 } from '@/lib/gex44';
+import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
@@ -74,9 +75,13 @@ Max 6 je Liste.
 LEADERBOARD (echte Wettbewerber): ${JSON.stringify(realComp.map((l) => ({ domain: l.domain, keywords: l.appearances, avgPos: l.avgPosition, bestPos: l.bestPosition })))}
 UNSERE POSITIONEN je Keyword: ${JSON.stringify(serps.map((s) => ({ kw: s.keyword, our: s.our })))}`;
 
-  const g = await askGex44(prompt, { model: 'qwen2.5:32b', timeoutMs: 240000 });
-  let analysis: any = null;
-  if (g.ok) { try { analysis = JSON.parse(g.raw || '{}'); } catch { /* */ } }
+  // 14b (nicht 32b): zuverlässig in Route-Zeit, num_ctx 16384 reicht → kein Output-Abschnitt
+  // (32b hatte heute getimeoutet → analysis=null, Seite halbleer). Robustes Parsing + Dedup.
+  const g = await askGex44(prompt, { timeoutMs: 240000 });
+  let analysis: any = g.ok ? parseLlmJson(g.raw) : null;
+  if (analysis && Array.isArray(analysis.massnahmen)) {
+    analysis.massnahmen = dedupeByTitle(analysis.massnahmen, 'title', 6);
+  }
 
   const rec = await createTrackingRecord('mkt_competitor_intel', {
     generated_at: new Date().toISOString(),

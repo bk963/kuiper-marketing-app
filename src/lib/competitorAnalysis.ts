@@ -4,6 +4,7 @@
  */
 import { dfsOverview, dfsRankedKeywords, dfsKeywordGap } from '@/lib/dataforseo';
 import { askGex44 } from '@/lib/gex44';
+import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 
@@ -54,9 +55,10 @@ Max 6 je Liste, wichtigstes zuerst.
 DATEN:
 ${JSON.stringify(data)}`;
 
-  const g = await askGex44(prompt, { model: 'qwen2.5:32b', timeoutMs: 240000 });
+  const g = await askGex44(prompt, { timeoutMs: 240000 });
   if (!g.ok) return { ok: false, error: g.error };
-  let parsed: any = {};
-  try { parsed = JSON.parse(g.raw || '{}'); } catch { return { ok: false, error: 'GEX44-Antwort kein valides JSON' }; }
+  const parsed: any = parseLlmJson(g.raw);
+  if (!parsed) return { ok: false, error: 'GEX44-Antwort kein valides JSON' };
+  if (Array.isArray(parsed.massnahmen)) parsed.massnahmen = dedupeByTitle(parsed.massnahmen, 'title', 6);
   return { ok: true, analysis: { ...parsed, data, generatedAt: new Date().toISOString() } };
 }
