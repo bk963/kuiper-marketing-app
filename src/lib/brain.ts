@@ -22,7 +22,13 @@ export async function collectSignals(days = 28) {
     .filter((r: any) => r.position > 3 && r.position <= 20 && r.impressions >= 30)
     .sort((a: any, b: any) => b.impressions - a.impressions)
     .slice(0, 12)
-    .map((r: any) => ({ query: r.query, page: r.page.replace(/^https?:\/\//, ''), impressions: r.impressions, clicks: r.clicks, position: Math.round(r.position * 10) / 10 }));
+    .map((r: any) => ({
+      query: r.query, page: r.page.replace(/^https?:\/\//, ''), impressions: r.impressions, clicks: r.clicks,
+      position: Math.round(r.position * 10) / 10,
+      // GSC-Gegencheck: rankt die Seite für diesen Begriff schon gut? Dann NICHT neu schreiben,
+      // sonst riskiert man ein bestehendes Ranking (vgl. "Brandklassen" = Pos ~7, voll optimiert).
+      standing: r.position <= 8 ? 'rankt_bereits_gut' : 'striking_distance',
+    }));
 
   // Friktion: Seiten mit den meisten Rage/Dead-Clicks
   const friction = (clarity?.byUrl || [])
@@ -56,17 +62,37 @@ export async function collectSignals(days = 28) {
 const SYS = `Du bist der Marketing-Analyst von Kuiper Safety Systems. STRATEGISCHES ZIEL: Marktführerschaft als externe SiFa (Fachkraft für Arbeitssicherheit) + externer Brandschutzbeauftragter (BSB), done-for-you, Fokus Pflegeeinrichtungen & Pflegedienste (wiederkehrende Verträge > einmalige Kurse). Priorisiere Maßnahmen, die auf dieses Ziel einzahlen. B2B, Deutschland.
 Analysiere die Marketing-Signale und liefere die wichtigsten, KONKRETEN Handlungsempfehlungen.
 Regeln: claim-safe (keine Heils-/Garantieversprechen, Haftung nur als Risiko), DE, umsetzbar, nach echtem Geschäftsimpact priorisiert (Leads/Umsatz, nicht nur Klicks).
-Antworte NUR als JSON:
-{"summary":"2-4 Sätze Gesamtlage","todos":[{"title":"kurz","category":"SEO|Content|Ads|UX|Branding","why":"datenbasierte Begründung","action":"konkreter nächster Schritt","priority":1,"effort":"low|med|high"}]}
-Maximal 10 To-dos, wichtigstes zuerst. priority 1=höchste.`;
+
+WICHTIGER GUARDRAIL (SEO): In seoOpportunities steht pro Keyword ein "standing".
+- standing="rankt_bereits_gut" (Position ≤ 8): Die Seite rankt bereits stark. NIEMALS "Seite neu schreiben" oder "neuen Inhalt erstellen" empfehlen — das riskiert ein bestehendes Ranking. Erlaubt sind nur: Feinschliff (Title/Meta/Snippet), interne Verlinkung, FAQ/Schema ergänzen, Ranking VERTEIDIGEN.
+- standing="striking_distance" (Position 9–20): Hier lohnt Ausbau/neue Inhalte/gezielte Optimierung Richtung Top-3.
+Formuliere SEO-To-dos entsprechend; verwechsle "schon stark" nicht mit "Lücke".
+
+Antworte NUR als JSON (kein Markdown, keine Code-Fences):
+{"summary":"2-4 Sätze Gesamtlage","todos":[{"title":"kurz","category":"SEO|Content|Ads|UX|Branding","why":"datenbasierte Begründung","action":"konkreter nächster Schritt","priority":1,"impact":"hoch|mittel|gering","effort":"low|med|high"}]}
+Maximal 10 To-dos, wichtigstes zuerst. priority 1=höchste. impact = erwarteter Geschäftsimpact (Leads/Umsatz).`;
+
+/** Tolerantes JSON-Parsing für LLM-Antworten: entfernt Code-Fences und extrahiert das
+ *  äußerste {…}-Objekt. Gibt null zurück, wenn gar nichts Brauchbares drin ist. */
+function parseLlmJson(raw?: string): any | null {
+  if (!raw) return null;
+  let s = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try { return JSON.parse(s); } catch { /* weiter */ }
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(s.slice(start, end + 1)); } catch { /* */ }
+  }
+  return null;
+}
 
 export async function runBrain(days = 28): Promise<{ ok: boolean; report?: any; error?: string }> {
   const signals = await collectSignals(days);
   const prompt = `${SYS}\n\nSIGNALE (letzte ${days} Tage):\n${JSON.stringify(signals)}`;
   const g = await askGex44(prompt);
   if (!g.ok) return { ok: false, error: g.error };
-  let parsed: any = {};
-  try { parsed = JSON.parse(g.raw || '{}'); } catch { return { ok: false, error: 'GEX44-Antwort kein valides JSON' }; }
+  const parsed = parseLlmJson(g.raw);
+  if (!parsed) return { ok: false, error: 'GEX44-Antwort kein valides JSON' };
   const todos = Array.isArray(parsed.todos) ? parsed.todos.slice(0, 12) : [];
   const summary = String(parsed.summary || '').slice(0, 1500);
   const report_date = new Date().toISOString().slice(0, 10);

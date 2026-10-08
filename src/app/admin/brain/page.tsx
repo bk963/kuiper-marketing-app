@@ -19,6 +19,22 @@ const CAT: Record<string, string> = {
   Branding: 'bg-emerald-100 text-emerald-800 border-emerald-200',
 };
 const EFFORT: Record<string, string> = { low: '🟢 gering', med: '🟡 mittel', high: '🔴 hoch' };
+const IMPACT: Record<string, string> = {
+  hoch: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  mittel: 'bg-amber-100 text-amber-800 border-amber-200',
+  gering: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="bg-white rounded-xl border p-4">
+      <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{label}</div>
+      <div className="text-2xl font-bold text-slate-900 mt-0.5">{value}</div>
+      {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+const nf = (n: number) => new Intl.NumberFormat('de-DE').format(Math.round(n));
 
 export default async function BrainPage() {
   await requireAdmin();
@@ -26,6 +42,8 @@ export default async function BrainPage() {
   const todos = Array.isArray(rep?.todos) ? [...rep.todos].sort((a: any, b: any) => (a.priority || 9) - (b.priority || 9)) : [];
   const tasksRes = await listTrackingRecords('mkt_brain_tasks', { sort: '-created', perPage: 50 });
   const tasks = ((tasksRes as any)?.items || []).filter((t: any) => t.status !== 'verworfen');
+  const sig: any = rep?.signals || {};
+  const seoOpps: any[] = Array.isArray(sig.seoOpportunities) ? sig.seoOpportunities : [];
 
   return (
     <div className="max-w-5xl">
@@ -44,6 +62,14 @@ export default async function BrainPage() {
 
       {rep && (
         <>
+          {/* KPI-Streifen: die Signale, auf denen die Analyse basiert */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Kpi label="Sessions" value={sig.ga4 ? nf(sig.ga4.sessions) : '—'} sub={sig.ga4 ? `${sig.ga4.engagementRate}% engaged · ${sig.period_days}T` : undefined} />
+            <Kpi label="Leads (7T)" value={sig.leads7d != null ? nf(sig.leads7d) : '—'} sub="Formular-Absendungen" />
+            <Kpi label="SEO" value={sig.gsc ? nf(sig.gsc.clicks) : '—'} sub={sig.gsc ? `Klicks · Ø Pos ${sig.gsc.position} · CTR ${sig.gsc.ctr}%` : undefined} />
+            <Kpi label="Ads" value={sig.ads ? `${nf(sig.ads.spend)} €` : '—'} sub={sig.ads ? `${nf(sig.ads.conversions)} Conv · CPA ${nf(sig.ads.cpa)} €` : undefined} />
+          </div>
+
           <div className="bg-white rounded-xl border p-5 mb-6">
             <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold mb-1">Gesamtlage</div>
             <p className="text-slate-800 leading-relaxed">{rep.summary || '—'}</p>
@@ -75,7 +101,8 @@ export default async function BrainPage() {
                   <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">{t.priority || i + 1}</span>
                   <span className="font-semibold text-slate-900">{t.title}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full border ${CAT[t.category] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{t.category || '—'}</span>
-                  <span className="text-xs text-slate-500 ml-auto">{EFFORT[t.effort] || t.effort || ''}</span>
+                  {t.impact && <span className={`text-xs px-2 py-0.5 rounded-full border ml-auto ${IMPACT[t.impact] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>Impact: {t.impact}</span>}
+                  <span className={`text-xs text-slate-500 ${t.impact ? '' : 'ml-auto'}`}>Aufwand: {EFFORT[t.effort] || t.effort || '—'}</span>
                 </div>
                 {t.why && <p className="text-sm text-slate-600 mb-1.5"><span className="text-slate-400">Warum:</span> {t.why}</p>}
                 {t.action && <p className="text-sm text-slate-800 mb-2.5"><span className="text-slate-400">Aktion:</span> {t.action}</p>}
@@ -83,6 +110,29 @@ export default async function BrainPage() {
               </div>
             ))}
           </div>
+
+          {seoOpps.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-1">SEO-Chancen (Datenbasis)</h2>
+              <p className="text-xs text-slate-500 mb-3">Begriffe mit vielen Impressionen auf Position 4–20. <b className="text-emerald-700">Rankt bereits</b> = nicht neu schreiben, nur Feinschliff/verteidigen. <b className="text-sky-700">Striking Distance</b> = Ausbau Richtung Top-3 lohnt.</p>
+              <div className="bg-white rounded-xl border divide-y overflow-hidden">
+                {seoOpps.slice(0, 10).map((o: any, i: number) => (
+                  <div key={i} className="p-3 flex items-center gap-3 text-sm">
+                    <span className="w-12 shrink-0 text-center font-bold text-slate-900">#{o.position}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-slate-900 truncate">{o.query}</div>
+                      <div className="text-xs text-slate-400 truncate">{o.page}</div>
+                    </div>
+                    <span className="text-xs text-slate-500 shrink-0 hidden sm:block">{nf(o.impressions)} Impr.</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${o.standing === 'rankt_bereits_gut' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-sky-100 text-sky-800 border-sky-200'}`}>
+                      {o.standing === 'rankt_bereits_gut' ? 'rankt bereits' : 'striking distance'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-slate-400 mt-5">Modell: {rep.model || 'GEX44'} · on-premise · DSGVO-konform (Daten verlassen nicht das Haus).</p>
         </>
       )}

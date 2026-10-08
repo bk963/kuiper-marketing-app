@@ -2,7 +2,7 @@
  * Gemeinsamer GEX44-Zugang (on-prem Ollama, DSGVO). JSON-Mode.
  * ENV: GEX44_URL, GEX44_USER, GEX44_PASS, GEX44_MODEL / GEX44_BRAIN_MODEL.
  */
-export async function askGex44(prompt: string, opts?: { model?: string; timeoutMs?: number }): Promise<{ ok: boolean; raw?: string; error?: string }> {
+export async function askGex44(prompt: string, opts?: { model?: string; timeoutMs?: number; numCtx?: number }): Promise<{ ok: boolean; raw?: string; error?: string }> {
   const url = process.env.GEX44_URL || 'https://gex44.kuiper-safety.de';
   const user = process.env.GEX44_USER || '';
   const pass = process.env.GEX44_PASS || '';
@@ -13,7 +13,9 @@ export async function askGex44(prompt: string, opts?: { model?: string; timeoutM
     const r = await fetch(`${url}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: auth },
-      body: JSON.stringify({ model, format: 'json', stream: false, prompt, options: { temperature: 0.3, num_ctx: 8192 } }),
+      // num_ctx 16384: großer Signal-Prompt + vollständige JSON-Antwort passen rein,
+      // sonst wird die Ausgabe abgeschnitten → "kein valides JSON" (Vorfall 2026-10-08 früh).
+      body: JSON.stringify({ model, format: 'json', stream: false, prompt, options: { temperature: 0.3, num_ctx: opts?.numCtx ?? 16384 } }),
       signal: AbortSignal.timeout(opts?.timeoutMs ?? 240000),
     });
     if (!r.ok) return { ok: false, error: `GEX44 HTTP ${r.status}` };
