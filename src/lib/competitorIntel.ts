@@ -8,6 +8,7 @@ import { askGex44 } from '@/lib/gex44';
 import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
 import { getKeywordRows, FALLBACK_KEYWORDS } from '@/lib/keywordSets';
+import { computeDominanz } from '@/lib/dominanz';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 
@@ -81,9 +82,20 @@ UNSERE POSITIONEN je Keyword: ${JSON.stringify(serps.map((s) => ({ kw: s.keyword
     analysis.massnahmen = dedupeByTitle(analysis.massnahmen, 'title', 6);
   }
 
+  // Dominanz-Score berechnen + in Verlauf speichern (nur Voll-Läufe zählen für den Trend)
+  const dominanz = computeDominanz(serps);
+  const scope = opts?.gruppe || 'alle';
+  try {
+    await createTrackingRecord('mkt_dominanz', {
+      datum: new Date().toISOString().slice(0, 10), scope,
+      score: dominanz.score, top3: dominanz.top3, top10: dominanz.top10,
+      not_ranking: dominanz.notRanking, kw_count: dominanz.kwCount, by_group: dominanz.byGroup,
+    });
+  } catch { /* History optional */ }
+
   const rec = await createTrackingRecord('mkt_competitor_intel', {
     generated_at: new Date().toISOString(),
-    leaderboard, serps, analysis, seed_keywords: SEED_KEYWORDS, scope: opts?.gruppe || 'alle',
+    leaderboard, serps, analysis, seed_keywords: SEED_KEYWORDS, scope, dominanz,
   });
   if (rec.error) return { ok: false, error: rec.error };
   return { ok: true, id: rec.record?.id };
@@ -94,4 +106,12 @@ export async function latestIntel(): Promise<any | null> {
     const r = await listTrackingRecords('mkt_competitor_intel', { sort: '-created', perPage: 1 });
     return (r as any)?.items?.[0] || null;
   } catch { return null; }
+}
+
+/** Dominanz-Verlauf (nur Voll-Läufe scope=alle), neueste zuerst. */
+export async function dominanzHistory(limit = 14): Promise<any[]> {
+  try {
+    const r = await listTrackingRecords('mkt_dominanz', { sort: '-created', perPage: 60, filter: 'scope="alle"' });
+    return ((r as any)?.items || []).slice(0, limit);
+  } catch { return []; }
 }

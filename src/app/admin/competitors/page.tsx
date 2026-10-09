@@ -1,17 +1,19 @@
 import { requireAdmin } from '@/lib/admin-auth';
 import { dfsOverview, dfsRankedKeywords, dfsKeywordGap } from '@/lib/dataforseo';
-import { latestIntel } from '@/lib/competitorIntel';
+import { latestIntel, dominanzHistory } from '@/lib/competitorIntel';
 import CompetitorForm from '@/components/CompetitorForm';
 import CompetitorAnalysis from '@/components/CompetitorAnalysis';
 import TodoActions from '@/components/TodoActions';
 import StatCard from '@/components/StatCard';
 
 const IMP: Record<string, string> = { hoch: 'bg-rose-100 text-rose-800', mittel: 'bg-amber-100 text-amber-800', gering: 'bg-slate-100 text-slate-700' };
+const GLABEL: Record<string, string> = { sifa: 'SiFa', bsb: 'Brandschutz', pflege: 'Pflege', lokal: 'Lokal/NRW', kosten: 'Kosten', sonstige: 'Sonstige' };
 
 export const dynamic = 'force-dynamic';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 function num(n: number) { return (n || 0).toLocaleString('de-DE'); }
+function scoreColor(s: number) { return s >= 60 ? '#10a050' : s >= 30 ? '#e08900' : '#d03030'; }
 
 export default async function CompetitorsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireAdmin();
@@ -23,6 +25,14 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
   const ib = Array.isArray(intel?.leaderboard) ? intel.leaderboard : [];
   const iserps = Array.isArray(intel?.serps) ? intel.serps : [];
   const ianalysis = intel?.analysis || null;
+
+  // Dominanz-Score + Verlauf
+  const domHist = await dominanzHistory(14);
+  const dom = intel?.dominanz || domHist[0] || null;
+  const domPrev = domHist[1] || null;
+  const domDelta = dom && domPrev ? (dom.score - domPrev.score) : null;
+  const spark = [...domHist].reverse(); // älteste→neueste für Sparkline
+  const byGroup = dom?.byGroup || dom?.by_group || {};
 
   const ourOv = await dfsOverview(OUR);
   const compData = await Promise.all(competitors.map(async (c) => ({
@@ -39,6 +49,66 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
         <a href="/admin/competitors/keywords" className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:border-cyan-400 hover:text-cyan-700">🎯 Keywords verwalten</a>
       </div>
       <p className="text-slate-600 mb-4">Wettbewerbs-Analyse via DataForSEO: geschätzter Organic-Traffic, Keyword-Lücken (sie ranken, wir nicht) & Top-Keywords. Eigene Domain: <b>{OUR}</b>.</p>
+
+      {/* ===== DOMINANZ-SCORE ===== */}
+      {dom && (
+        <div className="bg-white rounded-xl border p-5 mb-8">
+          <div className="flex items-start gap-6 flex-wrap">
+            <div className="flex items-center gap-4">
+              <div className="relative w-24 h-24 shrink-0">
+                <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#eef2f7" strokeWidth="3.4" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke={scoreColor(dom.score)} strokeWidth="3.4"
+                    strokeDasharray={`${dom.score} 100`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-extrabold text-slate-900">{dom.score}</span>
+                  <span className="text-[10px] text-slate-400 -mt-0.5">/ 100</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Marktdominanz-Score</div>
+                <div className="text-sm text-slate-700 mt-0.5 max-w-xs">Sichtbarkeit über alle beobachteten Keywords. <b>100 = überall #1.</b></div>
+                {domDelta !== null && (
+                  <div className={`text-xs font-semibold mt-1 ${domDelta > 0 ? 'text-emerald-600' : domDelta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                    {domDelta > 0 ? '▲ +' : domDelta < 0 ? '▼ ' : '● '}{domDelta !== 0 ? Math.abs(domDelta) : 'stabil'}{domDelta !== 0 ? ' ggü. letztem Lauf' : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mini-Stats */}
+            <div className="flex gap-4 items-center">
+              <div className="text-center"><div className="text-xl font-bold text-emerald-600">{dom.top3}</div><div className="text-[11px] text-slate-500">in Top 3</div></div>
+              <div className="text-center"><div className="text-xl font-bold text-slate-700">{dom.top10}</div><div className="text-[11px] text-slate-500">in Top 10</div></div>
+              <div className="text-center"><div className="text-xl font-bold text-rose-500">{dom.not_ranking ?? dom.notRanking}</div><div className="text-[11px] text-slate-500">nicht gelistet</div></div>
+              <div className="text-center"><div className="text-xl font-bold text-slate-400">{dom.kw_count ?? dom.kwCount}</div><div className="text-[11px] text-slate-500">Keywords</div></div>
+            </div>
+
+            {/* Sparkline Verlauf */}
+            {spark.length > 1 && (
+              <div className="flex items-end gap-1 h-16 ml-auto" title="Verlauf (ältester → neuester Lauf)">
+                {spark.map((p: any, i: number) => (
+                  <div key={i} className="w-2.5 rounded-t" style={{ height: `${Math.max(4, p.score)}%`, background: scoreColor(p.score), opacity: i === spark.length - 1 ? 1 : 0.45 }} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pro Gruppe */}
+          {Object.keys(byGroup).length > 0 && (
+            <div className="mt-5 pt-4 border-t grid grid-cols-2 md:grid-cols-5 gap-3">
+              {Object.entries(byGroup).map(([g, v]: [string, any]) => (
+                <div key={g}>
+                  <div className="flex items-center justify-between mb-1"><span className="text-xs font-semibold text-slate-600">{GLABEL[g] || g}</span><span className="text-xs font-bold" style={{ color: scoreColor(v.score) }}>{v.score}</span></div>
+                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${v.score}%`, background: scoreColor(v.score) }} /></div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{v.top3}/{v.count} in Top 3</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== Automatische Wettbewerbs-Suche (SERP-Discovery) ===== */}
       <div className="bg-white rounded-xl border p-5 mb-8">
