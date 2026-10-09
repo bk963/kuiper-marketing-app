@@ -3,17 +3,19 @@ import { latestReport } from '@/lib/brain';
 import { listTrackingRecords } from '@/lib/pb-tracking';
 import RunBrainButton from '@/components/RunBrainButton';
 import TodoActions from '@/components/TodoActions';
+import ApproveTaskButton from '@/components/ApproveTaskButton';
 
 export const dynamic = 'force-dynamic';
 
 const STATUS: Record<string, string> = {
   beauftragt: 'bg-sky-100 text-sky-800', in_arbeit: 'bg-amber-100 text-amber-800 animate-pulse',
-  wartet_freigabe: 'bg-violet-100 text-violet-800', fehler: 'bg-rose-100 text-rose-800',
+  wartet_freigabe: 'bg-violet-100 text-violet-800', freigegeben: 'bg-indigo-100 text-indigo-800 animate-pulse',
+  fehler: 'bg-rose-100 text-rose-800',
   erledigt: 'bg-emerald-100 text-emerald-800', verworfen: 'bg-slate-100 text-slate-500',
 };
 const STATUS_LABEL: Record<string, string> = {
   beauftragt: '⏳ beauftragt', in_arbeit: '⚙️ in Arbeit', wartet_freigabe: '🔶 wartet auf Freigabe',
-  fehler: '⚠️ Fehler', erledigt: '✅ erledigt', verworfen: 'verworfen',
+  freigegeben: '🚀 wird live geschaltet', fehler: '⚠️ Fehler', erledigt: '✅ erledigt', verworfen: 'verworfen',
 };
 const LOGDOT: Record<string, string> = { change: 'bg-cyan-500', error: 'bg-rose-500', info: 'bg-slate-300' };
 
@@ -101,6 +103,7 @@ export default async function BrainPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-slate-900">{t.title}</div>
                         {t.result && <div className="text-xs text-slate-600 mt-1 leading-relaxed"><span className="text-slate-400">Ergebnis:</span> {t.result}</div>}
+                        {t.status === 'wartet_freigabe' && <div className="mt-2"><ApproveTaskButton id={t.id} /></div>}
                       </div>
                       <span className="text-xs text-slate-400 shrink-0">{(t.created || '').slice(0, 10)}</span>
                     </div>
