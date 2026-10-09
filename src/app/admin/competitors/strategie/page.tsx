@@ -10,6 +10,7 @@ const IMP: Record<string, string> = { hoch: 'bg-emerald-100 text-emerald-800', m
 const EFFORT: Record<string, string> = { low: '🟢 gering', med: '🟡 mittel', high: '🔴 hoch' };
 
 function arr(v: any): any[] { if (Array.isArray(v)) return v; if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; } } return []; }
+function asText(v: any): string { if (v == null) return ''; if (typeof v === 'string') return v; if (typeof v === 'object') { const s = Object.values(v).find((x) => typeof x === 'string'); return (s as string) || JSON.stringify(v); } return String(v); }
 
 export default async function StrategiePage() {
   await requireAdmin();
@@ -45,7 +46,7 @@ export default async function StrategiePage() {
           {quickwins.length > 0 && (
             <div className="bg-white rounded-xl border p-5">
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2">⚡ Quick-Wins</h3>
-              <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">{quickwins.map((q, i) => <li key={i}>{q}</li>)}</ul>
+              <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">{quickwins.map((q, i) => <li key={i}>{asText(q)}</li>)}</ul>
             </div>
           )}
 
@@ -55,9 +56,9 @@ export default async function StrategiePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {roadmap.map((r: any, i: number) => (
                   <div key={i} className="bg-white rounded-xl border p-4">
-                    <div className="text-xs font-bold text-cyan-700">{r.phase}</div>
-                    <div className="text-sm font-semibold text-slate-900 mt-1 mb-2">{r.ziel}</div>
-                    <ul className="text-xs text-slate-600 list-disc list-inside space-y-0.5">{arr(r.schritte).map((x: string, j: number) => <li key={j}>{x}</li>)}</ul>
+                    <div className="text-xs font-bold text-cyan-700">{asText(r.phase)}</div>
+                    <div className="text-sm font-semibold text-slate-900 mt-1 mb-2">{asText(r.ziel)}</div>
+                    <ul className="text-xs text-slate-600 list-disc list-inside space-y-0.5">{arr(r.schritte).map((x: any, j: number) => <li key={j}>{asText(x)}</li>)}</ul>
                   </div>
                 ))}
               </div>
@@ -68,8 +69,8 @@ export default async function StrategiePage() {
             <div className="bg-white rounded-xl border p-5">
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2">📚 Content-Cluster</h3>
               <div className="space-y-2">{cluster.map((c: any, i: number) => (
-                <div key={i} className="text-sm"><b className="text-slate-900">{c.thema}</b> <span className="text-slate-500">— {c.zweck}</span>
-                  <div className="flex flex-wrap gap-1 mt-1">{arr(c.keywords).map((k: string, j: number) => <span key={j} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{k}</span>)}</div>
+                <div key={i} className="text-sm"><b className="text-slate-900">{asText(c.thema)}</b> <span className="text-slate-500">— {asText(c.zweck)}</span>
+                  <div className="flex flex-wrap gap-1 mt-1">{arr(c.keywords).map((k: any, j: number) => <span key={j} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{asText(k)}</span>)}</div>
                 </div>
               ))}</div>
             </div>
@@ -78,7 +79,7 @@ export default async function StrategiePage() {
           {verteidigung.length > 0 && (
             <div className="bg-white rounded-xl border p-5">
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2">🛡️ Verteidigung</h3>
-              <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">{verteidigung.map((v, i) => <li key={i}>{v}</li>)}</ul>
+              <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">{verteidigung.map((v, i) => <li key={i}>{asText(v)}</li>)}</ul>
             </div>
           )}
 
@@ -90,12 +91,12 @@ export default async function StrategiePage() {
                   <div key={i} className="bg-white rounded-xl border p-4">
                     <div className="flex items-center gap-2 flex-wrap mb-1.5">
                       <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
-                      <span className="font-semibold text-slate-900">{m.title}</span>
+                      <span className="font-semibold text-slate-900">{asText(m.title)}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">{m.kategorie || '—'}</span>
                       {m.impact && <span className={`text-xs px-2 py-0.5 rounded-full ml-auto ${IMP[m.impact] || 'bg-slate-100'}`}>Impact: {m.impact}</span>}
                       <span className="text-xs text-slate-500">{EFFORT[m.effort] || m.effort || ''}</span>
                     </div>
-                    {m.action && <p className="text-sm text-slate-700 mb-2.5"><span className="text-slate-400">Aktion:</span> {m.action}</p>}
+                    {m.action && <p className="text-sm text-slate-700 mb-2.5"><span className="text-slate-400">Aktion:</span> {asText(m.action)}</p>}
                     <TodoActions todo={{ title: m.title, category: m.kategorie, action: m.action, impact: m.impact, effort: m.effort, source: 'strategie' }} />
                   </div>
                 ))}

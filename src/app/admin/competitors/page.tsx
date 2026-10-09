@@ -16,6 +16,13 @@ export const dynamic = 'force-dynamic';
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 function num(n: number) { return (n || 0).toLocaleString('de-DE'); }
 function scoreColor(s: number) { return s >= 60 ? '#10a050' : s >= 30 ? '#e08900' : '#d03030'; }
+// KI-Ausgaben liefern Listen manchmal als Objekte ({konkrete_Chance:"…"}) statt Strings → sicher zu Text machen.
+function asText(v: any): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') { const s = Object.values(v).find((x) => typeof x === 'string'); return (s as string) || JSON.stringify(v); }
+  return String(v);
+}
 
 export default async function CompetitorsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireAdmin();
@@ -209,7 +216,7 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
             {Array.isArray(ianalysis?.chancen) && ianalysis.chancen.length > 0 && (
               <div className="mb-4">
                 <span className="text-xs uppercase tracking-wide text-slate-400 font-semibold">🎯 Chancen</span>
-                <ul className="list-disc list-inside text-sm text-slate-700 mt-1 space-y-1">{ianalysis.chancen.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                <ul className="list-disc list-inside text-sm text-slate-700 mt-1 space-y-1">{ianalysis.chancen.map((x: any, i: number) => <li key={i}>{asText(x)}</li>)}</ul>
               </div>
             )}
 
@@ -220,11 +227,11 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
                   {ianalysis.massnahmen.map((m: any, i: number) => (
                     <div key={i} className="border rounded-lg p-3">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-semibold text-slate-900">{m.title}</span>
+                        <span className="font-semibold text-slate-900">{asText(m.title)}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${IMP[m.impact] || 'bg-slate-100 text-slate-700'}`}>Impact: {m.impact}</span>
                         <span className="text-xs text-slate-500">Aufwand: {m.aufwand}</span>
                       </div>
-                      <p className="text-sm text-slate-700 mb-2">{m.action}</p>
+                      <p className="text-sm text-slate-700 mb-2">{asText(m.action)}</p>
                       <TodoActions todo={{ title: m.title, category: 'Wettbewerb', action: m.action, impact: m.impact, effort: m.aufwand, source: 'wettbewerb-intel' }} />
                     </div>
                   ))}
