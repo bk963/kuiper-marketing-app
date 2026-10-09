@@ -1,8 +1,10 @@
 import { requireAdmin } from '@/lib/admin-auth';
 import { dfsOverview, dfsRankedKeywords, dfsKeywordGap } from '@/lib/dataforseo';
 import { latestIntel, dominanzHistory } from '@/lib/competitorIntel';
+import { listDossiers } from '@/lib/dossier';
 import CompetitorForm from '@/components/CompetitorForm';
 import CompetitorAnalysis from '@/components/CompetitorAnalysis';
+import DossierRefreshButton from '@/components/DossierRefreshButton';
 import TodoActions from '@/components/TodoActions';
 import StatCard from '@/components/StatCard';
 
@@ -33,6 +35,7 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
   const domDelta = dom && domPrev ? (dom.score - domPrev.score) : null;
   const spark = [...domHist].reverse(); // älteste→neueste für Sparkline
   const byGroup = dom?.byGroup || dom?.by_group || {};
+  const dossiers = await listDossiers();
 
   const ourOv = await dfsOverview(OUR);
   const compData = await Promise.all(competitors.map(async (c) => ({
@@ -107,6 +110,50 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ===== WETTBEWERBER-DOSSIERS ===== */}
+      {dossiers.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-slate-900 mb-1">📇 Wettbewerber-Dossiers</h2>
+          <p className="text-sm text-slate-600 mb-3">Lebende Profile der echten Konkurrenten — Traffic, Stärken und ihre Keyword-Lücken ggü. uns (= was wir ihnen abnehmen können). Täglich wird das älteste Dossier automatisch aufgefrischt.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {dossiers.map((d: any) => {
+              const staerken = Array.isArray(d.staerken) ? d.staerken : [];
+              const luecken = Array.isArray(d.luecken) ? d.luecken : [];
+              return (
+                <div key={d.id} className="bg-white rounded-xl border p-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="font-bold text-slate-900">{d.domain}</div>
+                    <DossierRefreshButton domain={d.domain} />
+                  </div>
+                  <div className="flex gap-4 text-sm mb-3">
+                    <span><b>{num(d.traffic)}</b> <span className="text-slate-400">Besucher/Mon</span></span>
+                    <span><b>{num(d.keywords)}</b> <span className="text-slate-400">Keywords</span></span>
+                    <span><b>{num(d.top3)}</b> <span className="text-slate-400">Top 3</span></span>
+                  </div>
+                  {staerken.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold mb-1">Stärken</div>
+                      <ul className="text-sm text-slate-700 list-disc list-inside space-y-0.5">{staerken.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                    </div>
+                  )}
+                  {luecken.length > 0 && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold mb-1">Keyword-Lücken (sie ranken, wir nicht)</div>
+                      <div className="flex flex-wrap gap-1">
+                        {luecken.slice(0, 8).map((k: any, i: number) => (
+                          <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700" title={`Vol ${k.vol}/Mon · ihre Pos ${k.theirPos}`}>{k.kw}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[10px] text-slate-400 mt-3">zuletzt aktualisiert: {d.zuletzt || '—'}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

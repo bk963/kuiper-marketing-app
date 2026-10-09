@@ -9,6 +9,7 @@ import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
 import { getKeywordRows, FALLBACK_KEYWORDS } from '@/lib/keywordSets';
 import { computeDominanz } from '@/lib/dominanz';
+import { refreshStalestFromLeaderboard } from '@/lib/dossier';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
 
@@ -98,6 +99,11 @@ UNSERE POSITIONEN je Keyword: ${JSON.stringify(serps.map((s) => ({ kw: s.keyword
     leaderboard, serps, analysis, seed_keywords: SEED_KEYWORDS, scope, dominanz,
   });
   if (rec.error) return { ok: false, error: rec.error };
+
+  // 1 Dossier/Lauf auffrischen (stalest) — nur bei Voll-Läufen, hält dfs-Kosten niedrig
+  if (!opts?.gruppe) {
+    try { await refreshStalestFromLeaderboard(realComp.map((l) => l.domain)); } catch { /* optional */ }
+  }
   return { ok: true, id: rec.record?.id };
 }
 
