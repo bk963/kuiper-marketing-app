@@ -7,23 +7,9 @@ import { dfsSerp } from '@/lib/dataforseo';
 import { askGex44 } from '@/lib/gex44';
 import { parseLlmJson, dedupeByTitle } from '@/lib/llmjson';
 import { createTrackingRecord, listTrackingRecords } from '@/lib/pb-tracking';
+import { getKeywordRows, FALLBACK_KEYWORDS } from '@/lib/keywordSets';
 
 const OUR = (process.env.GSC_SITE_URL || 'sc-domain:kuiper-safety.de').replace('sc-domain:', '').replace(/^https?:\/\//, '');
-
-// Money-/Ziel-Keywords — Kuiper-Ziel: 100% Dominanz externe SiFa + externer BSB,
-// done-for-you, Fokus Pflegeeinrichtungen & Pflegedienste. (NICHT generische Kurse.)
-const SEED_KEYWORDS = [
-  'externe sifa pflege',
-  'externe sicherheitsfachkraft pflegeeinrichtung',
-  'externer brandschutzbeauftragter pflegeheim',
-  'externer brandschutzbeauftragter pflegedienst',
-  'fachkraft für arbeitssicherheit pflege',
-  'gefährdungsbeurteilung pflegeeinrichtung',
-  'arbeitssicherheit pflegedienst',
-  'externe sicherheitsfachkraft',
-  'externer brandschutzbeauftragter',
-  'brandschutzbeauftragter extern kosten',
-];
 
 // Keine echten Schulungs-Wettbewerber (Portale/Social/Verzeichnisse/Shops) — werden markiert.
 const GENERIC = new Set([
@@ -35,11 +21,17 @@ const GENERIC = new Set([
 ]);
 
 export type IntelLeader = { domain: string; appearances: number; avgPosition: number; bestPosition: number; keywords: string[]; generic: boolean };
-export type IntelSerp = { keyword: string; our: number | null; top: { domain: string; position: number }[] };
+export type IntelSerp = { keyword: string; gruppe?: string; our: number | null; top: { domain: string; position: number }[] };
 
-export async function runCompetitorIntel(): Promise<{ ok: boolean; id?: string; error?: string }> {
+export async function runCompetitorIntel(opts?: { gruppe?: string }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const serps: IntelSerp[] = [];
   const agg = new Map<string, { positions: number[]; keywords: Set<string> }>();
+
+  // Steuerbares Keyword-Set aus dem Cockpit (mkt_keywords, aktiv). Optional auf eine Gruppe begrenzt.
+  let rows = await getKeywordRows({ gruppe: opts?.gruppe, onlyActive: true });
+  if (!rows.length) rows = FALLBACK_KEYWORDS.map((k, i) => ({ id: `fb${i}`, aktiv: true, ...k }));
+  const SEED_KEYWORDS = rows.map((r) => r.keyword);
+  const KW_GROUP: Record<string, string> = Object.fromEntries(rows.map((r) => [r.keyword, r.gruppe || 'sonstige']));
 
   // SERP-Calls parallel (je ~24s) → zusammen ~24s statt 240s sequenziell.
   const results = await Promise.all(SEED_KEYWORDS.map(async (kw) => ({ kw, data: (await dfsSerp(kw, 15)).data })));
@@ -54,7 +46,7 @@ export async function runCompetitorIntel(): Promise<{ ok: boolean; id?: string; 
       const a = agg.get(r.domain) || { positions: [], keywords: new Set<string>() };
       a.positions.push(r.position); a.keywords.add(kw); agg.set(r.domain, a);
     }
-    serps.push({ keyword: kw, our, top: top.slice(0, 5) });
+    serps.push({ keyword: kw, gruppe: KW_GROUP[kw], our, top: top.slice(0, 5) });
   }
 
   const leaderboard: IntelLeader[] = [...agg.entries()]
@@ -91,7 +83,7 @@ UNSERE POSITIONEN je Keyword: ${JSON.stringify(serps.map((s) => ({ kw: s.keyword
 
   const rec = await createTrackingRecord('mkt_competitor_intel', {
     generated_at: new Date().toISOString(),
-    leaderboard, serps, analysis, seed_keywords: SEED_KEYWORDS,
+    leaderboard, serps, analysis, seed_keywords: SEED_KEYWORDS, scope: opts?.gruppe || 'alle',
   });
   if (rec.error) return { ok: false, error: rec.error };
   return { ok: true, id: rec.record?.id };

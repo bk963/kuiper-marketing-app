@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
   if (!internalOk) {
     try { await requireAdmin(); } catch { return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); }
   }
-  const res = await runCompetitorIntel();
+  let gruppe: string | undefined;
+  try { const b = await req.json(); if (b?.gruppe) gruppe = String(b.gruppe); } catch { /* kein Body ok */ }
+  const res = await runCompetitorIntel(gruppe ? { gruppe } : undefined);
   if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: 502 });
   return NextResponse.json({ ok: true, id: res.id });
 }

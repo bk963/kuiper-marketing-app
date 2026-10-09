@@ -34,7 +34,10 @@ export default async function CompetitorsPage({ searchParams }: { searchParams: 
 
   return (
     <div className="max-w-7xl">
-      <h1 className="text-3xl font-extrabold mb-2">🥊 Wettbewerb</h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+        <h1 className="text-3xl font-extrabold">🥊 Wettbewerb</h1>
+        <a href="/admin/competitors/keywords" className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:border-cyan-400 hover:text-cyan-700">🎯 Keywords verwalten</a>
+      </div>
       <p className="text-slate-600 mb-4">Wettbewerbs-Analyse via DataForSEO: geschätzter Organic-Traffic, Keyword-Lücken (sie ranken, wir nicht) & Top-Keywords. Eigene Domain: <b>{OUR}</b>.</p>
 
       {/* ===== Automatische Wettbewerbs-Suche (SERP-Discovery) ===== */}
