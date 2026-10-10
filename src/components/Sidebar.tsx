@@ -28,7 +28,9 @@ const NAV: NavItem[] = [
   // Leere/nicht-migrierte Seiten 2026-10-06 ausgeblendet (Blog→blog.kuiper-safety.de,
   // Landingpages/Bausteine/Templates/Marketing-Leads: 0 Daten / Collection fehlt).
   // Wieder einblenden, sobald befüllt.
-  { href: '/admin/content/seo-intel', label: 'SEO-Intel', icon: '🎯' },
+  // SEO-Intel 2026-10-10 ausgeblendet: Funktion (Keywords/Rankings/Wettbewerb) ist jetzt in
+  // /admin/seo (GSC live), /admin/competitors (Dominanz+Dossiers) und /admin/brain besser abgedeckt.
+  // { href: '/admin/content/seo-intel', label: 'SEO-Intel', icon: '🎯' },
   { href: '/admin/content/site', label: 'Site-Pages', icon: '🌐' },
   { href: '/admin/content/forms', label: 'Formulare', icon: '📋' },
 
