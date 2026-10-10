@@ -5,7 +5,6 @@
  */
 import { listTrackingRecords } from '@/lib/pb-tracking';
 import { latestIntel, dominanzHistory } from '@/lib/competitorIntel';
-import { latestReport } from '@/lib/brain';
 
 export type Ausrichtung = {
   id?: string; keil: string; region: string; zielperson: string;
@@ -42,9 +41,14 @@ export async function getNordstern(a: Ausrichtung) {
   const scores = a.fokus_gruppen.map((g) => Number(byGroup?.[g]?.score ?? 0));
   const focusScore = scores.length ? Math.round(scores.reduce((x, y) => x + y, 0) / scores.length) : 0;
 
-  const rep = await latestReport();
-  const sig = rep?.signals || {};
-  const leads = Number((typeof sig === 'string' ? JSON.parse(sig) : sig)?.leads7d ?? 0);
+  // Leads LIVE zählen (nicht aus dem gespeicherten Brain-Report, der veraltet sein kann) —
+  // echte form_submits der letzten 7T OHNE die HeadlessChrome-Testsubmits des Form-Watchdogs.
+  let leads = 0;
+  try {
+    const since = new Date(Date.now() - 7 * 86400000).toISOString().replace('T', ' ').slice(0, 19);
+    const r = await listTrackingRecords('tracking_events', { filter: `event_type~"form_submit" && created>="${since}" && user_agent !~ "Headless"`, perPage: 500, fields: 'id' });
+    leads = (r as any)?.items?.length ?? 0;
+  } catch { /* */ }
 
   // Delta ggü. vorletztem Voll-Lauf (Fokus-Gruppen)
   const hist = await dominanzHistory(10);
