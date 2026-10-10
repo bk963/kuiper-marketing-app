@@ -15,6 +15,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: '/admin', label: 'Übersicht', icon: '📊' },
   { href: '/admin/ausrichtung', label: 'Ausrichtung', icon: '🎯' },
+  { href: '/admin/content-kampagne', label: 'Content-Kampagne', icon: '🏭' },
   { href: '/admin/brain', label: 'Marketing-Brain', icon: '🧠' },
 
   { href: '#dashboards', label: 'DASHBOARDS', icon: '', hub: true },
