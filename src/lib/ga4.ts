@@ -70,16 +70,16 @@ export async function ga4Overview(days = 7): Promise<{ rows: Ga4OverviewRow[]; t
       bounceRate: Number(r.metricValues?.[3]?.value || 0),
       engagementRate: Number(r.metricValues?.[4]?.value || 0),
     }));
-    const total = rows.reduce(
-      (acc, r) => ({
-        sessions: acc.sessions + r.sessions,
-        users: acc.users + r.users,
-        pageviews: acc.pageviews + r.pageviews,
-        bounceRate: r.bounceRate, // letzter Tag als Repräsentant
-        engagementRate: r.engagementRate,
-      }),
-      { sessions: 0, users: 0, pageviews: 0, bounceRate: 0, engagementRate: 0 },
-    );
+    // Gesamtwerte: Summen; Raten SESSION-GEWICHTET über den ganzen Zeitraum
+    // (Bug-Fix: vorher wurde nur der letzte Tag genommen → z.B. 100 % statt echter ~60 %).
+    const totSessions = rows.reduce((a, r) => a + r.sessions, 0);
+    const total = {
+      sessions: totSessions,
+      users: rows.reduce((a, r) => a + r.users, 0),
+      pageviews: rows.reduce((a, r) => a + r.pageviews, 0),
+      bounceRate: totSessions ? rows.reduce((a, r) => a + r.bounceRate * r.sessions, 0) / totSessions : 0,
+      engagementRate: totSessions ? rows.reduce((a, r) => a + r.engagementRate * r.sessions, 0) / totSessions : 0,
+    };
     return { rows, total };
   } catch (e: any) {
     return { rows: [], total: { sessions: 0, users: 0, pageviews: 0, bounceRate: 0, engagementRate: 0 }, error: e?.message?.slice(0, 200) || 'GA4 error' };
