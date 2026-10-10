@@ -14,6 +14,7 @@ type NavItem = {
 // sind aus der Nav genommen — Routen-Dateien bleiben, nur ausgeblendet bis sie leben.
 const NAV: NavItem[] = [
   { href: '/admin', label: 'Übersicht', icon: '📊' },
+  { href: '/admin/ausrichtung', label: 'Ausrichtung', icon: '🎯' },
   { href: '/admin/brain', label: 'Marketing-Brain', icon: '🧠' },
 
   { href: '#dashboards', label: 'DASHBOARDS', icon: '', hub: true },
