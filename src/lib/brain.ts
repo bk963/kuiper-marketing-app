@@ -36,11 +36,12 @@ export async function collectSignals(days = 28) {
     .map((x) => ({ url: x.url.replace(/^https?:\/\/(www\.)?/, ''), sessions: x.sessions, dead: x.deadClicks, rage: x.rageClicks, quickBack: x.quickBacks, scriptErr: x.scriptErrors, score: x.deadClicks + x.rageClicks * 2 + x.quickBacks + x.scriptErrors * 2 }))
     .filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8);
 
-  // Leads: form_submit-Events letzte 7 Tage
+  // Leads: echte form_submit-Events letzte 7 Tage — OHNE die Test-Absendungen des
+  // BSH-Form-Watchdogs (Cron alle 2h via HeadlessChrome). Die blähten die Zahl sonst massiv auf.
   let leads7d = 0;
   try {
     const since = new Date(Date.now() - 7 * 86400000).toISOString().replace('T', ' ').slice(0, 19);
-    const r = await listTrackingRecords('tracking_events', { filter: `event_type~"form_submit" && created>="${since}"`, perPage: 500, fields: 'id' });
+    const r = await listTrackingRecords('tracking_events', { filter: `event_type~"form_submit" && created>="${since}" && user_agent !~ "Headless"`, perPage: 500, fields: 'id' });
     leads7d = (r as any)?.items?.length ?? 0;
   } catch { /* */ }
 
