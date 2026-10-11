@@ -44,6 +44,19 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 }
 const nf = (n: number) => new Intl.NumberFormat('de-DE').format(Math.round(n));
 
+function parseUrls(raw?: string): string[] {
+  return String(raw || '').split(/[,\s]+/).map((s) => s.trim()).filter((s) => /^https?:\/\//.test(s));
+}
+function urlLabel(u: string): string {
+  try {
+    const p = new URL(u);
+    if (p.pathname.includes('sitemap')) return 'Sitemap';
+    const seg = p.pathname.replace(/\/$/, '').split('/').filter(Boolean);
+    const last = seg.length ? seg[seg.length - 1] : p.hostname;
+    return last.replace(/-/g, ' ').replace(/\.(xml|html)$/, '');
+  } catch { return u; }
+}
+
 export default async function BrainPage() {
   await requireAdmin();
   const rep = await latestReport();
@@ -103,6 +116,16 @@ export default async function BrainPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-slate-900">{t.title}</div>
                         {t.result && <div className="text-xs text-slate-600 mt-1 leading-relaxed"><span className="text-slate-400">Ergebnis:</span> {t.result}</div>}
+                        {parseUrls(t.result_url).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {parseUrls(t.result_url).map((u: string) => (
+                              <a key={u} href={u} target="_blank" rel="noopener noreferrer"
+                                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-200 hover:bg-cyan-100 transition">
+                                🔗 <span className="truncate max-w-[220px]">{urlLabel(u)}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         {t.status === 'wartet_freigabe' && <div className="mt-2"><ApproveTaskButton id={t.id} /></div>}
                       </div>
                       <span className="text-xs text-slate-400 shrink-0">{(t.created || '').slice(0, 10)}</span>
