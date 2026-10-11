@@ -28,12 +28,22 @@ export type LeadRow = {
 
 const FIELDS = 'id,lead_source,form_id,form_page,landing_page,first_referrer,utm_source,utm_medium,utm_campaign,status,quality_score,submitted_at,geo_city,lead_company,lead_email';
 
-/** Holt alle Leads im Zeitfenster (days=null → alle). Paginiert bis max. 4000. */
+/**
+ * Nur ECHTE externe Form-Einsendungen. Ausgeschlossen (sonst ~96% Rauschen):
+ * - BSH-Form-Watchdog: Cron alle 2h via HeadlessChrome → user_agent enthält "Headless"
+ * - Bot-Spam: honeypot-Feld gefüllt
+ * - interne Test-Mails: @kuiper-safety.de / @brandschutzdozenten.de / kuiper0281@gmail.com
+ * Abgeglichen 2026-10-11: 30T roh 1115 → echt 36.
+ */
+export const REAL_LEADS_FILTER =
+  'user_agent!~"Headless" && honeypot="" && lead_email!~"@test.de" && lead_email!~"e2e-watchdog" && lead_email!~"@kuiper-safety.de" && lead_email!~"@brandschutzdozenten.de" && lead_email!="kuiper0281@gmail.com"';
+
+/** Holt alle ECHTEN Leads im Zeitfenster (days=null → alle). Paginiert bis max. 4000. */
 export async function getLeads(days: number | null): Promise<LeadRow[]> {
-  let filter = '';
+  let filter = REAL_LEADS_FILTER;
   if (days && days > 0) {
     const since = new Date(Date.now() - days * 86400000).toISOString().replace('T', ' ').slice(0, 19);
-    filter = `submitted_at>="${since}"`;
+    filter = `submitted_at>="${since}" && ${REAL_LEADS_FILTER}`;
   }
   const all: LeadRow[] = [];
   for (let page = 1; page <= 8; page++) {
