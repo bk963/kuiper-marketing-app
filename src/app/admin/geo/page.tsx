@@ -16,7 +16,9 @@ export default async function GeoPage() {
     (byLw[lw] ||= {});
     (byLw[lw][cl] ||= []).push(b);
   }
-  const frei = blocks.filter((b: any) => b.status === 'freigegeben' || b.status === 'live').length;
+  const offen = blocks.filter((b: any) => (b.status || 'entwurf') === 'entwurf').length;
+  const live = blocks.filter((b: any) => b.status === 'live').length;
+  const dublette = blocks.filter((b: any) => b.status === 'dublette').length;
   // Live-URLs (für GSC "Indexierung beantragen" — Bing läuft via IndexNow automatisch)
   const liveUrls = Array.from(new Set(blocks.filter((b: any) => b.status === 'live' && b.zielseite).map((b: any) => b.zielseite))) as string[];
   const gscLink = (u: string) => `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent('sc-domain:kuiper-safety.de')}&id=${encodeURIComponent('https://www.kuiper-safety.de' + u)}`;
@@ -26,10 +28,11 @@ export default async function GeoPage() {
       <div className="text-xs uppercase tracking-wide text-cyan-600 font-semibold font-mono">Content-Maschine · GEO</div>
       <h1 className="text-3xl font-extrabold mb-1">🔎 GEO — Als Quelle in ChatGPT</h1>
       <p className="text-slate-600 mb-4 max-w-2xl">Echte Google-Search-Console-Fragen → zitierfähige §-Antwortblöcke. Fachlich freigeben, dann in die Leistungswelten (FAQ-Schema) + Indexierung. Loop: monatlich neue Fragen.</p>
-      <div className="flex gap-2 mb-6 text-sm">
+      <div className="flex flex-wrap gap-2 mb-6 text-sm">
         <span className="px-3 py-1.5 rounded-full bg-slate-100 font-semibold">{blocks.length} Blöcke</span>
-        <span className="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">{frei} freigegeben</span>
-        <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 font-semibold">{blocks.length - frei} offen</span>
+        <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 font-semibold">{offen} offen (zu prüfen)</span>
+        <span className="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">{live} live</span>
+        {dublette > 0 && <span className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{dublette} schon auf Seite</span>}
       </div>
 
       {liveUrls.length > 0 && (
