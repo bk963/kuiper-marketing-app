@@ -70,8 +70,18 @@ export default async function AdminCockpit() {
       {/* ── Prompt + gepinntes Dashboard ── */}
       <CockpitClient initialTiles={initialTiles} />
 
+      {/* ── Leads-Teaser ── */}
+      <Link href="/admin/leads" className="mt-12 mb-8 flex items-center gap-4 p-5 bg-cyan-50 rounded-xl border border-cyan-200 hover:shadow-md hover:border-brand transition">
+        <div className="text-3xl">👥</div>
+        <div className="flex-1">
+          <div className="font-bold text-slate-900">Leads-Dashboard</div>
+          <p className="text-sm text-slate-600">Form-Absendungen nach Quelle, Seite, Lead-Magnet &amp; Zeitraum — alle Herkünfte auf einen Blick.</p>
+        </div>
+        <div className="text-brand font-bold text-sm whitespace-nowrap">Öffnen →</div>
+      </Link>
+
       {/* ── Deep-Dive-Dashboards ── */}
-      <div className="mt-12 mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">Deep-Dive</div>
+      <div className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">Deep-Dive</div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { href: '/admin/traffic', icon: '📈', t: 'Traffic', d: 'Sessions, Channels, Geo, Devices (GA4)' },

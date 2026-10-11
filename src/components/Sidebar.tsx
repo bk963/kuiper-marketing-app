@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: '/admin/brain', label: 'Marketing-Brain', icon: '🧠' },
 
   { href: '#dashboards', label: 'DASHBOARDS', icon: '', hub: true },
+  { href: '/admin/leads', label: 'Leads', icon: '👥' },
   { href: '/admin/traffic', label: 'Traffic', icon: '📈' },
   { href: '/admin/seo', label: 'SEO', icon: '🔍' },
   { href: '/admin/ads', label: 'Ads', icon: '🎯' },
