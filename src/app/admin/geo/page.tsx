@@ -17,6 +17,9 @@ export default async function GeoPage() {
     (byLw[lw][cl] ||= []).push(b);
   }
   const frei = blocks.filter((b: any) => b.status === 'freigegeben' || b.status === 'live').length;
+  // Live-URLs (für GSC "Indexierung beantragen" — Bing läuft via IndexNow automatisch)
+  const liveUrls = Array.from(new Set(blocks.filter((b: any) => b.status === 'live' && b.zielseite).map((b: any) => b.zielseite))) as string[];
+  const gscLink = (u: string) => `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent('sc-domain:kuiper-safety.de')}&id=${encodeURIComponent('https://www.kuiper-safety.de' + u)}`;
 
   return (
     <div className="max-w-4xl">
@@ -28,6 +31,21 @@ export default async function GeoPage() {
         <span className="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">{frei} freigegeben</span>
         <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 font-semibold">{blocks.length - frei} offen</span>
       </div>
+
+      {liveUrls.length > 0 && (
+        <div className="mb-6 rounded-xl border border-cyan-200 bg-cyan-50/50 p-4">
+          <div className="text-sm font-bold text-slate-800 mb-1">🌐 Live-URLs — bei Google kurz „Indexierung beantragen"</div>
+          <p className="text-xs text-slate-500 mb-2">Bing läuft automatisch (IndexNow). Für Google ein 30-Sek-Klick je URL (kein Muss, beschleunigt nur).</p>
+          <ul className="space-y-1">
+            {liveUrls.map((u) => (
+              <li key={u} className="text-xs flex flex-wrap items-center gap-2">
+                <a href={`https://www.kuiper-safety.de${u}`} target="_blank" className="text-cyan-700 font-mono hover:underline">{u}</a>
+                <a href={gscLink(u)} target="_blank" className="px-2 py-0.5 rounded bg-cyan-600 text-white font-semibold">→ in GSC prüfen/indexieren</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {blocks.length === 0 && <p className="text-sm text-slate-500">Noch keine Blöcke. Generator läuft (Opus) — Seite später neu laden.</p>}
 
