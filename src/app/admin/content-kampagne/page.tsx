@@ -3,6 +3,7 @@ import { listTrackingRecords } from '@/lib/pb-tracking';
 import { getAusrichtung, getHeadToHead } from '@/lib/ausrichtung';
 import NewCampaignForm from '@/components/NewCampaignForm';
 import CampaignApprove from '@/components/CampaignApprove';
+import BildBriefing from '@/components/BildBriefing';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,8 +81,9 @@ export default async function ContentKampagnePage() {
                       <ul className="text-xs text-slate-600 list-disc list-inside mt-1">{arr(p.youtube.kapitel).map((k: any, i: number) => <li key={i}>{k}</li>)}</ul></details>
                   )}
                   {arr(p.bilder).length > 0 && (
-                    <details className="border rounded-lg p-3"><summary className="font-semibold text-sm cursor-pointer">🖼️ Bild-Vorgaben ({arr(p.bilder).length})</summary>
-                      <ul className="mt-2 text-xs text-slate-600 list-disc list-inside space-y-1">{arr(p.bilder).map((x: any, i: number) => <li key={i}>{typeof x === 'string' ? x : JSON.stringify(x)}</li>)}</ul></details>
+                    <details open className="border rounded-lg p-3"><summary className="font-semibold text-sm cursor-pointer">🖼️ Bild-Briefings ({arr(p.bilder).length}) — selbst erstellen</summary>
+                      <p className="text-[11px] text-slate-400 mt-1 mb-2">Fertige Vorgaben nach Fotostandard. „Briefing kopieren" → in ChatGPT einfügen, Bild selbst erzeugen.</p>
+                      <div className="space-y-2">{arr(p.bilder).map((x: any, i: number) => <BildBriefing key={i} b={x} i={i} />)}</div></details>
                   )}
                 </div>
               )}
