@@ -44,7 +44,7 @@ function resolveRange(sp: { range?: string; from?: string; to?: string }) {
     let from = sp.from;
     let to = (sp.to && DATE_RE.test(sp.to)) ? sp.to : from;
     if (from > to) [from, to] = [to, from];
-    return { key: 'custom', label: from === to ? fmtDE(from) : `${fmtDE(from)} – ${fmtDE(to)}`,
+    return { key: 'custom', label: from === to ? fmtDE(from) : `${fmtDE(from)} bis ${fmtDE(to)}`,
       since: berlinDayStart(from), until: berlinDayEnd(to), trendStart: from, trendEnd: to, from, to };
   }
   if (sp.range === 'today') {
