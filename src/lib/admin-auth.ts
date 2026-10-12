@@ -16,7 +16,10 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 const COOKIE_NAME = 'ks_admin_session';
-const SESSION_DURATION_S = 60 * 60; // 1 Stunde
+// 7 Tage (vorher 1h → lang offene Tabs liefen ab, Aktions-Buttons warfen dann
+// "Unexpected token '<'" weil der Fetch die Login-HTML statt JSON bekam). Internes
+// Cockpit hinter Login → längere Session ist vertretbar und erspart ständiges Neu-Anmelden.
+const SESSION_DURATION_S = 7 * 24 * 60 * 60;
 
 function getSecret() {
   const s = process.env.ADMIN_JWT_SECRET || 'change-me-please-min-32-chars-long-yo';

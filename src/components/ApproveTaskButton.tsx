@@ -15,8 +15,15 @@ export default function ApproveTaskButton({ id }: { id: string }) {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'freigegeben' }),
       });
+      // Session abgelaufen → Middleware liefert die Login-HTML statt JSON.
+      // Sauber abfangen statt "Unexpected token '<'": klare Meldung + Re-Login.
+      if (!(r.headers.get('content-type') || '').includes('application/json')) {
+        setErr('Sitzung abgelaufen — Anmeldung wird neu geladen…'); setState('error');
+        setTimeout(() => { window.location.href = '/admin/login'; }, 1400);
+        return;
+      }
       const d = await r.json();
-      if (!d.ok) { setErr(d.error || 'Fehler'); setState('error'); }
+      if (!r.ok || !d.ok) { setErr(d.error || `Fehler (${r.status})`); setState('error'); }
       else setState('done');
     } catch (e: any) { setErr(e?.message || 'Fehler'); setState('error'); }
   };
