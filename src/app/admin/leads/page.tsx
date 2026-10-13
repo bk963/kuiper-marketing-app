@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/admin-auth';
-import { getLeadsBetween, tally, tallyWon, dailyTrend, isQualified, isLeadMagnet, getWonHashes, isWon, QUALIFIED_MIN, type LeadRow } from '@/lib/leads';
+import { getLeadsBetween, tally, tallyWon, dailyTrend, isQualified, isLeadMagnet, getWonSets, isWon, QUALIFIED_MIN, type LeadRow } from '@/lib/leads';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -128,7 +128,7 @@ export default async function LeadsDashboard({ searchParams }: { searchParams: P
   await requireAdmin();
   const sp = await searchParams;
   const range = resolveRange(sp);
-  const [leads, wonSet] = await Promise.all([getLeadsBetween(range.since, range.until), getWonHashes()]);
+  const [leads, wonSet] = await Promise.all([getLeadsBetween(range.since, range.until), getWonSets()]);
 
   const total = leads.length;
   const qualified = leads.filter(isQualified).length;

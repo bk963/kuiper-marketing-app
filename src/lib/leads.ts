@@ -67,20 +67,37 @@ export async function getLeads(days: number | null): Promise<LeadRow[]> {
   return getLeadsBetween(since, null);
 }
 
-/** Set der sha256-gehashten easybill-Kundenmails (Won-Marker). Täglich via sync_won_emails.sh gepflegt. */
-export async function getWonHashes(): Promise<Set<string>> {
+export type WonSets = { emailHashes: Set<string>; domains: Set<string> };
+const FREEMAIL = new Set(['gmail.com','googlemail.com','web.de','gmx.de','gmx.net','gmx.at','gmx.ch','t-online.de','yahoo.com','yahoo.de','hotmail.com','hotmail.de','outlook.com','outlook.de','live.com','live.de','icloud.com','me.com','mac.com','aol.com','freenet.de','mail.de','posteo.de','online.de','arcor.de','vodafone.de','kabelmail.de','ewe.net','1und1.de','gmx.com','protonmail.com','proton.me']);
+
+/**
+ * Won-Marker aus echten easybill-Rechnungskunden (INVOICE, nicht draft) — täglich via
+ * sync_won_emails.sh. emailHashes = exakter Zahler-Match; domains = Business-Domains der
+ * Zahler (Freemail ausgeschlossen) für "privat angefragt, Firma kauft"-Fälle.
+ */
+export async function getWonSets(): Promise<WonSets> {
   try {
-    const r = await listTrackingRecords('mkt_won_emails', { perPage: 1, fields: 'hashes_json' });
-    const h = ((r as any)?.items?.[0]?.hashes_json) || [];
-    return new Set(Array.isArray(h) ? h : []);
-  } catch { return new Set(); }
+    const r = await listTrackingRecords('mkt_won_emails', { perPage: 1, fields: 'hashes_json,domains_json' });
+    const rec = (r as any)?.items?.[0] || {};
+    return {
+      emailHashes: new Set(Array.isArray(rec.hashes_json) ? rec.hashes_json : []),
+      domains: new Set(Array.isArray(rec.domains_json) ? rec.domains_json : []),
+    };
+  } catch { return { emailHashes: new Set(), domains: new Set() }; }
 }
 const emailHash = (e?: string) => e ? createHash('sha256').update(e.toLowerCase().trim()).digest('hex') : '';
-/** Wurde dieser Lead zahlender easybill-Kunde? */
-export const isWon = (l: LeadRow, wonSet: Set<string>) => !!l.lead_email && wonSet.has(emailHash(l.lead_email));
+const domainOf = (e?: string) => (e || '').toLowerCase().trim().split('@')[1] || '';
+/** Wurde dieser Lead zahlender easybill-Kunde? Exakter Match oder (nicht-Freemail) Firmen-Domain. */
+export const isWon = (l: LeadRow, w: WonSets) => {
+  const e = (l.lead_email || '').toLowerCase().trim();
+  if (!e.includes('@')) return false;
+  if (w.emailHashes.has(emailHash(e))) return true;
+  const d = domainOf(e);
+  return !!d && !FREEMAIL.has(d) && w.domains.has(d);
+};
 
 /** Wie tally(), zusätzlich mit Kunden-Anzahl je Gruppe (Lead→Kunde-Conversion). */
-export function tallyWon(rows: LeadRow[], key: keyof LeadRow, wonSet: Set<string>, fallback = '(direkt / ohne)'): Array<{ label: string; n: number; won: number }> {
+export function tallyWon(rows: LeadRow[], key: keyof LeadRow, wonSet: WonSets, fallback = '(direkt / ohne)'): Array<{ label: string; n: number; won: number }> {
   const m = new Map<string, { n: number; won: number }>();
   for (const r of rows) {
     const v = String(r[key] ?? '').trim() || fallback;
