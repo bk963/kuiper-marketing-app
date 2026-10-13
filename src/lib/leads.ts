@@ -6,6 +6,7 @@
  * Als Zeitfeld daher IMMER `submitted_at`. perPage-Cap: 500 → paginieren.
  */
 import { listTrackingRecords } from './pb-tracking';
+import { createHash } from 'node:crypto';
 
 export type LeadRow = {
   id: string;
@@ -64,6 +65,30 @@ export async function getLeads(days: number | null): Promise<LeadRow[]> {
     ? new Date(Date.now() - days * 86400000).toISOString().replace('T', ' ').slice(0, 19)
     : null;
   return getLeadsBetween(since, null);
+}
+
+/** Set der sha256-gehashten easybill-Kundenmails (Won-Marker). Täglich via sync_won_emails.sh gepflegt. */
+export async function getWonHashes(): Promise<Set<string>> {
+  try {
+    const r = await listTrackingRecords('mkt_won_emails', { perPage: 1, fields: 'hashes_json' });
+    const h = ((r as any)?.items?.[0]?.hashes_json) || [];
+    return new Set(Array.isArray(h) ? h : []);
+  } catch { return new Set(); }
+}
+const emailHash = (e?: string) => e ? createHash('sha256').update(e.toLowerCase().trim()).digest('hex') : '';
+/** Wurde dieser Lead zahlender easybill-Kunde? */
+export const isWon = (l: LeadRow, wonSet: Set<string>) => !!l.lead_email && wonSet.has(emailHash(l.lead_email));
+
+/** Wie tally(), zusätzlich mit Kunden-Anzahl je Gruppe (Lead→Kunde-Conversion). */
+export function tallyWon(rows: LeadRow[], key: keyof LeadRow, wonSet: Set<string>, fallback = '(direkt / ohne)'): Array<{ label: string; n: number; won: number }> {
+  const m = new Map<string, { n: number; won: number }>();
+  for (const r of rows) {
+    const v = String(r[key] ?? '').trim() || fallback;
+    const e = m.get(v) || { n: 0, won: 0 };
+    e.n++; if (isWon(r, wonSet)) e.won++;
+    m.set(v, e);
+  }
+  return [...m.entries()].map(([label, x]) => ({ label, ...x })).sort((a, b) => b.n - a.n);
 }
 
 export const QUALIFIED_MIN = 60;

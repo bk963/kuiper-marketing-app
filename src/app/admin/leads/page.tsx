@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/admin-auth';
-import { getLeadsBetween, tally, dailyTrend, isQualified, isLeadMagnet, QUALIFIED_MIN, type LeadRow } from '@/lib/leads';
+import { getLeadsBetween, tally, tallyWon, dailyTrend, isQualified, isLeadMagnet, getWonHashes, isWon, QUALIFIED_MIN, type LeadRow } from '@/lib/leads';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -72,9 +72,10 @@ function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?
   );
 }
 
-function BarList({ title, rows, total, hint, max = 8 }: { title: string; rows: Array<{ label: string; n: number }>; total: number; hint?: string; max?: number }) {
+function BarList({ title, rows, total, hint, max = 8 }: { title: string; rows: Array<{ label: string; n: number; won?: number }>; total: number; hint?: string; max?: number }) {
   const top = rows.slice(0, max);
   const peak = Math.max(1, ...top.map((r) => r.n));
+  const showWon = top.some((r) => r.won !== undefined);
   return (
     <div className="bg-white rounded-xl border p-5">
       <div className="flex items-baseline justify-between mb-3">
@@ -83,16 +84,22 @@ function BarList({ title, rows, total, hint, max = 8 }: { title: string; rows: A
       </div>
       {!top.length && <div className="text-sm text-slate-400">Keine Daten im Zeitraum.</div>}
       <div className="space-y-2">
-        {top.map((r) => (
+        {top.map((r) => {
+          const conv = r.won !== undefined && r.n ? Math.round((r.won / r.n) * 100) : 0;
+          return (
           <div key={r.label} className="flex items-center gap-3 text-sm">
-            <div className="w-40 sm:w-52 shrink-0 truncate text-slate-700" title={r.label}>{r.label}</div>
-            <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-              <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${Math.round((r.n / peak) * 100)}%` }} />
+            <div className="w-36 sm:w-48 shrink-0 truncate text-slate-700" title={r.label}>{r.label}</div>
+            <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden relative">
+              <div className="h-full bg-cyan-200 rounded-full" style={{ width: `${Math.round((r.n / peak) * 100)}%` }} />
+              {showWon && r.won ? <div className="h-full bg-emerald-500 rounded-full absolute top-0 left-0" style={{ width: `${Math.round((r.won / peak) * 100)}%` }} /> : null}
             </div>
-            <div className="w-16 shrink-0 text-right tabular-nums font-semibold text-slate-900">{nf(r.n)}</div>
-            <div className="w-12 shrink-0 text-right tabular-nums text-xs text-slate-400">{total ? Math.round((r.n / total) * 100) : 0}%</div>
+            <div className="w-14 shrink-0 text-right tabular-nums font-semibold text-slate-900">{nf(r.n)}</div>
+            {showWon
+              ? <div className="w-24 shrink-0 text-right tabular-nums text-xs"><span className="text-emerald-700 font-semibold">{nf(r.won || 0)} Kd.</span> <span className="text-slate-400">{conv}%</span></div>
+              : <div className="w-12 shrink-0 text-right tabular-nums text-xs text-slate-400">{total ? Math.round((r.n / total) * 100) : 0}%</div>}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -121,16 +128,18 @@ export default async function LeadsDashboard({ searchParams }: { searchParams: P
   await requireAdmin();
   const sp = await searchParams;
   const range = resolveRange(sp);
-  const leads = await getLeadsBetween(range.since, range.until);
+  const [leads, wonSet] = await Promise.all([getLeadsBetween(range.since, range.until), getWonHashes()]);
 
   const total = leads.length;
   const qualified = leads.filter(isQualified).length;
   const magnets = leads.filter(isLeadMagnet);
+  const won = leads.filter((l) => isWon(l, wonSet)).length;
   const avgScore = total ? Math.round(leads.reduce((s, l) => s + (l.quality_score || 0), 0) / total) : 0;
   const qualRate = total ? Math.round((qualified / total) * 100) : 0;
+  const convRate = total ? Math.round((won / total) * 100) : 0;
 
-  const bySource = tally(leads, 'lead_source');
-  const byPage = tally(leads, 'form_page');
+  const bySource = tallyWon(leads, 'lead_source', wonSet);
+  const byPage = tallyWon(leads, 'form_page', wonSet);
   const byChannel = tally(leads, 'utm_source');
   const byStatus = tally(leads, 'status');
   const byCity = tally(leads.filter((l) => l.geo_city), 'geo_city', '(unbekannt)');
@@ -170,19 +179,21 @@ export default async function LeadsDashboard({ searchParams }: { searchParams: P
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 my-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 my-6">
         <Kpi label="Leads gesamt" value={nf(total)} sub={range.label} accent />
-        <Kpi label="Qualifiziert" value={nf(qualified)} sub={`Score ≥ ${QUALIFIED_MIN}`} />
-        <Kpi label="Qualifizierungsrate" value={`${qualRate}%`} sub="qualifiziert / gesamt" />
-        <Kpi label="Lead-Magnete" value={nf(magnets.length)} sub="PDF-/Checklisten-Opt-ins" />
+        <Kpi label="Kunden geworden" value={nf(won)} sub="aus easybill (gematcht)" accent />
+        <Kpi label="Lead→Kunde" value={`${convRate}%`} sub="Kunden / Leads" />
+        <Kpi label="Qualifiziert" value={nf(qualified)} sub={`Score ≥ ${QUALIFIED_MIN} · ${qualRate}%`} />
+        <Kpi label="Lead-Magnete" value={nf(magnets.length)} sub="Opt-ins" />
         <Kpi label="Ø Quality-Score" value={String(avgScore)} sub="0–100" />
       </div>
 
       <Trend data={trend} />
 
-      <div className="grid md:grid-cols-2 gap-4 mt-4">
-        <BarList title="Nach Lead-Quelle" rows={bySource} total={total} hint="lead_source" />
-        <BarList title="Nach Seite / Herkunft" rows={byPage} total={total} hint="form_page" />
+      <p className="text-xs text-slate-500 mt-4 mb-1">Balken: <span className="text-cyan-600 font-semibold">Leads</span> · <span className="text-emerald-600 font-semibold">davon Kunden</span> (easybill-Match). So siehst du, welche Quelle/Seite wirklich <b>Kunden</b> bringt, nicht nur Leads.</p>
+      <div className="grid md:grid-cols-2 gap-4">
+        <BarList title="Nach Lead-Quelle" rows={bySource} total={total} hint="Leads · Kunden" />
+        <BarList title="Nach Seite / Herkunft" rows={byPage} total={total} hint="Leads · Kunden" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mt-4">
@@ -207,6 +218,7 @@ export default async function LeadsDashboard({ searchParams }: { searchParams: P
                 <th className="px-3 py-3 text-left font-semibold">Quelle</th>
                 <th className="px-3 py-3 text-left font-semibold">Seite</th>
                 <th className="px-3 py-3 text-left font-semibold">Stadt</th>
+                <th className="px-3 py-3 text-center font-semibold">Kunde</th>
                 <th className="px-3 py-3 text-right font-semibold">Score</th>
               </tr>
             </thead>
@@ -221,6 +233,7 @@ export default async function LeadsDashboard({ searchParams }: { searchParams: P
                   <td className="px-3 py-2.5 text-xs text-slate-600">{l.lead_source || '—'}</td>
                   <td className="px-3 py-2.5 text-xs text-slate-500 max-w-[180px] truncate" title={l.form_page}>{l.form_page || '—'}</td>
                   <td className="px-3 py-2.5 text-xs text-slate-500">{l.geo_city || '—'}</td>
+                  <td className="px-3 py-2.5 text-center">{isWon(l, wonSet) ? <span className="text-emerald-600 font-bold" title="ist easybill-Kunde">✓</span> : <span className="text-slate-300">—</span>}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${isQualified(l) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>{l.quality_score || 0}</span>
                   </td>
