@@ -61,8 +61,23 @@ export default async function BrainPage() {
   await requireAdmin();
   const rep = await latestReport();
   const todos = Array.isArray(rep?.todos) ? [...rep.todos].sort((a: any, b: any) => (a.priority || 9) - (b.priority || 9)) : [];
-  const tasksRes = await listTrackingRecords('mkt_brain_tasks', { sort: '-created', perPage: 50 });
+  const tasksRes = await listTrackingRecords('mkt_brain_tasks', { sort: '-created', perPage: 100 });
   const tasks = ((tasksRes as any)?.items || []).filter((t: any) => t.status !== 'verworfen');
+
+  // Bereits beauftragte/erledigte To-dos ausblenden: sonst bleiben erledigte Vorschläge
+  // ewig stehen UND der tägliche Brain-Lauf generiert sie neu (Bk 2026-10-13). Match über
+  // signifikante Wörter/Keyword gegen bestehende Tasks (jeder Status außer verworfen).
+  const STOP = new Set(['optimierung','seite','seiten','position','positionen','hinzufügen','erweitern','erweiterte','verbessern','verbessere','optimieren','optimiere','erstellen','erstelle','content','fokus','landingpage','keyword','keyphrase','inhalte','inhalt','relevante','links','backlinks','einbinden','sowie','mehr','gute','neue','spezifische','spezifischen','dieser','diese','dieses']);
+  const sigWords = (s: string) => new Set(String(s || '').toLowerCase().replace(/['"„""'']/g, ' ').replace(/[^a-z0-9äöüß\s/-]/g, ' ').split(/[\s/-]+/).filter((w) => w.length > 3 && !STOP.has(w)));
+  const taskSigs: Set<string>[] = tasks.map((t: any) => sigWords(t.title));
+  const alreadyQueued = (title: string) => {
+    const a = sigWords(title);
+    if (a.size === 0) return false;
+    return taskSigs.some((b) => {
+      const inter = [...a].filter((w) => b.has(w)).length;
+      return a.size <= 2 ? inter === a.size : inter >= 2 && inter / a.size >= 0.5;
+    });
+  };
   // Aktivitäts-Log je Task (was/wann/wo der Worter autonom geändert hat)
   let logsByTask: Record<string, any[]> = {};
   try {
@@ -155,9 +170,13 @@ export default async function BrainPage() {
             </div>
           )}
 
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3">Priorisierte To-dos ({todos.length})</h2>
+          {(() => { const open = todos.filter((t: any) => !alreadyQueued(t.title || '')); const hidden = todos.length - open.length; return (
+          <>
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-1">Offene To-dos ({open.length})</h2>
+          <p className="text-xs text-slate-400 mb-3">Nur noch NICHT beauftragte Vorschläge.{hidden > 0 ? ` ${hidden} bereits beauftragt/erledigt — ausgeblendet (siehe „An Claude beauftragt" oben).` : ''}</p>
+          {open.length === 0 && <div className="p-6 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm text-center">Alle Vorschläge des letzten Brain-Laufs sind beauftragt oder erledigt. 🎉</div>}
           <div className="space-y-3">
-            {todos.map((t: any, i: number) => (
+            {open.map((t: any, i: number) => (
               <div key={i} className="bg-white rounded-xl border p-4 hover:shadow-sm transition">
                 <div className="flex items-center gap-2 flex-wrap mb-1.5">
                   <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">{t.priority || i + 1}</span>
@@ -172,6 +191,8 @@ export default async function BrainPage() {
               </div>
             ))}
           </div>
+          </>
+          ); })()}
 
           {seoOpps.length > 0 && (
             <div className="mt-8">
