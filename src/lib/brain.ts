@@ -45,23 +45,29 @@ export async function collectSignals(days = 28) {
     leads7d = (r as any)?.items?.length ?? 0;
   } catch { /* */ }
 
-  // Wettbewerbs-Signale (additiv, read-only): letzter Competitor-Intel-Vollauf aus pb-tracking.
-  // Nur Lesen des letzten Laufs — KEINE neuen SERP-Calls (die macht der eigene competitor-intel-Cron).
+  // Wettbewerbs-Signale (additiv, read-only): letzter Competitor-Intel-Lauf (mkt_competitor_intel)
+  // + Dominanz-Score (mkt_dominanz, scope="alle"). Nur Lesen — KEINE neuen SERP-Calls.
   let competitors: any = null;
   try {
-    const ci = await listTrackingRecords('mkt_competitor_intel', { sort: '-created', perPage: 1, filter: 'scope="alle"' });
-    const rec: any = (ci as any)?.items?.[0];
-    if (rec) {
-      const leaders = (Array.isArray(rec.leaderboard) ? rec.leaderboard : [])
+    const [ciRes, domRes] = await Promise.all([
+      listTrackingRecords('mkt_competitor_intel', { sort: '-created', perPage: 1 }),
+      listTrackingRecords('mkt_dominanz', { sort: '-created', perPage: 1, filter: 'scope="alle"' }),
+    ]);
+    const rec: any = (ciRes as any)?.items?.[0];
+    const dom: any = (domRes as any)?.items?.[0];
+    if (rec || dom) {
+      const leaders = (rec && Array.isArray(rec.leaderboard) ? rec.leaderboard : [])
         .filter((l: any) => !l.generic).slice(0, 6)
         .map((l: any) => ({ domain: l.domain, avgPos: Math.round((l.avgPosition || 0) * 10) / 10, kw: l.appearances }));
-      const dom = rec.dominanz || null;
+      const chancen = (rec && rec.analysis && Array.isArray(rec.analysis.chancen) ? rec.analysis.chancen : [])
+        .slice(0, 5)
+        .map((ch: any) => typeof ch === 'string' ? ch : [ch?.keyword_bezug, ch?.konkrete_chance].filter(Boolean).join(': '));
       competitors = {
-        stand: rec.generated_at || rec.created,
+        stand: (rec && (rec.generated_at || rec.created)) || (dom && dom.created) || null,
         dominanzScore: dom ? dom.score : null,        // 0–100 (100 = überall #1)
-        top3: dom ? dom.top3 : null, notRanking: dom ? dom.notRanking : null, kwCount: dom ? dom.kwCount : null,
+        top3: dom ? dom.top3 : null, notRanking: dom ? dom.not_ranking : null, kwCount: dom ? dom.kw_count : null,
         topWettbewerber: leaders,
-        chancen: (rec.analysis && Array.isArray(rec.analysis.chancen)) ? rec.analysis.chancen.slice(0, 5) : [],
+        chancen,
       };
     }
   } catch { /* Wettbewerbs-Signal optional — darf den Brain-Lauf nie brechen */ }
