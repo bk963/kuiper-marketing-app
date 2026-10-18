@@ -45,6 +45,27 @@ export async function collectSignals(days = 28) {
     leads7d = (r as any)?.items?.length ?? 0;
   } catch { /* */ }
 
+  // Wettbewerbs-Signale (additiv, read-only): letzter Competitor-Intel-Vollauf aus pb-tracking.
+  // Nur Lesen des letzten Laufs — KEINE neuen SERP-Calls (die macht der eigene competitor-intel-Cron).
+  let competitors: any = null;
+  try {
+    const ci = await listTrackingRecords('mkt_competitor_intel', { sort: '-created', perPage: 1, filter: 'scope="alle"' });
+    const rec: any = (ci as any)?.items?.[0];
+    if (rec) {
+      const leaders = (Array.isArray(rec.leaderboard) ? rec.leaderboard : [])
+        .filter((l: any) => !l.generic).slice(0, 6)
+        .map((l: any) => ({ domain: l.domain, avgPos: Math.round((l.avgPosition || 0) * 10) / 10, kw: l.appearances }));
+      const dom = rec.dominanz || null;
+      competitors = {
+        stand: rec.generated_at || rec.created,
+        dominanzScore: dom ? dom.score : null,        // 0–100 (100 = überall #1)
+        top3: dom ? dom.top3 : null, notRanking: dom ? dom.notRanking : null, kwCount: dom ? dom.kwCount : null,
+        topWettbewerber: leaders,
+        chancen: (rec.analysis && Array.isArray(rec.analysis.chancen)) ? rec.analysis.chancen.slice(0, 5) : [],
+      };
+    }
+  } catch { /* Wettbewerbs-Signal optional — darf den Brain-Lauf nie brechen */ }
+
   return {
     period_days: days,
     ga4: ov ? { sessions: ov.total.sessions, users: ov.total.users, pageviews: ov.total.pageviews, engagementRate: Math.round(ov.total.engagementRate * 100) } : null,
@@ -58,6 +79,7 @@ export async function collectSignals(days = 28) {
     campaigns: (camps || []).slice(0, 8).map((c: any) => ({ name: c.name, spend: Math.round(c.cost), conv: c.conversions, cpa: c.conversions ? Math.round(c.cost / c.conversions) : null })),
     frictionPages: friction,
     leads7d,
+    competitors,
   };
 }
 
@@ -69,6 +91,8 @@ WICHTIGER GUARDRAIL (SEO): In seoOpportunities steht pro Keyword ein "standing".
 - standing="rankt_bereits_gut" (Position ≤ 8): Die Seite rankt bereits stark. NIEMALS "Seite neu schreiben"/"neuen Inhalt erstellen" empfehlen — das riskiert ein bestehendes Ranking. Mach daraus KEIN eigenes To-do pro Keyword; solche Begriffe höchstens in EINEM gebündelten "Top-Rankings halten"-To-do erwähnen, und nur wenn es eine konkrete Aktion gibt.
 - standing="striking_distance" (Position 9–20): ECHTER Hebel — Ausbau/gezielte Optimierung Richtung Top-3.
 Verwechsle "schon stark" nicht mit "Lücke". Fokussiere To-dos auf echte Hebel: striking_distance-Keywords, Content für Pflegeeinrichtungen/-dienste, Ads-Effizienz (CPA/Budget), Friction-Fixes.
+
+WETTBEWERB: Das Signal "competitors" (falls vorhanden) liefert unseren Dominanz-Score (0–100, 100 = überall #1), unsere Top3-/NotRanking-Keyword-Zahl, die stärksten Wettbewerber-Domains (topWettbewerber) und konkrete Chancen (chancen). Übersetze echte Lücken in To-dos (z.B. Money-Keyword, wo Wettbewerber Top3 rankt und wir nicht). Nenne Wettbewerber NICHT namentlich im öffentlichen Content.
 
 QUALITÄT: Jedes To-do EINDEUTIG — KEINE Wiederholungen/Varianten desselben Themas, nicht künstlich auffüllen. Lieber 3–6 starke, distinkte To-dos als 10 schwache.
 
