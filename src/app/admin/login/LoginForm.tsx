@@ -7,34 +7,38 @@ export default function LoginForm({ error }: { error?: string }) {
     <form
       method="POST"
       action="/admin/api/auth/login"
-      className="space-y-4"
+      className="space-y-5"
       onSubmit={() => setPending(true)}
     >
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">E-Mail</label>
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-900">{error}</div>
+      )}
+      <div className="space-y-2">
+        <label className="text-[#0d1b3e] font-semibold">E-Mail-Adresse</label>
         <input
           type="email"
           name="email"
           required
           autoComplete="username"
-          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+          placeholder="name@kuiper-safety.de"
+          className="w-full bg-slate-50 border border-slate-200 text-[#0d1b3e] h-12 rounded-xl px-3 focus:ring-2 focus:ring-[#00C2FF] outline-none transition"
         />
       </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Passwort</label>
+      <div className="space-y-2">
+        <label className="text-[#0d1b3e] font-semibold">Passwort</label>
         <input
           type="password"
           name="password"
           required
           autoComplete="current-password"
-          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+          placeholder="••••••••"
+          className="w-full bg-slate-50 border border-slate-200 text-[#0d1b3e] h-12 rounded-xl px-3 focus:ring-2 focus:ring-[#00C2FF] outline-none transition"
         />
       </div>
-      {error && <div className="text-sm text-red-600">{error}</div>}
       <button
         type="submit"
         disabled={pending}
-        className="w-full inline-flex justify-center items-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold transition disabled:opacity-50"
+        className="w-full h-12 mt-1 bg-[#0d1b3e] hover:opacity-90 text-white font-bold text-base rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 inline-flex justify-center items-center gap-2"
       >
         {pending ? 'Anmeldung…' : 'Anmelden'}
       </button>
